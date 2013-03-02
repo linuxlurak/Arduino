@@ -1,6 +1,6 @@
 #include "SPI.h"
 #include "Adafruit_WS2801.h"
-
+int debug = 0;
 /*****************************************************************************
 Example sketch for driving Adafruit WS2801 pixels!
 
@@ -30,6 +30,10 @@ Example sketch for driving Adafruit WS2801 pixels!
 int dataPin  = 2;    // Yellow wire on Adafruit Pixels
 int clockPin = 3;    // Green wire on Adafruit Pixels
 
+//Buttons on pins 4, 5, and 6. Using an array to track state.
+// buttons[0] - buttons[3] will never be used.
+boolean buttons[] = {false, false, false, false, false, false, false};
+
 // Don't forget to connect the ground wire to Arduino ground,
 // and the +5V wire to a +5V supply
 
@@ -49,6 +53,7 @@ Adafruit_WS2801 strip = Adafruit_WS2801(20, dataPin, clockPin, WS2801_GRB);
 //Adafruit_WS2801 strip = Adafruit_WS2801(25, dataPin, clockPin, WS2801_GRB);
 //Adafruit_WS2801 strip = Adafruit_WS2801(25, WS2801_GRB);
 
+boolean pin13state = false;
 void setup() {
     
   strip.begin();
@@ -56,15 +61,36 @@ void setup() {
   // Update LED contents, to start they are all 'off'
   strip.show();
   Serial.begin(9600);
-  delay(5);
+  //delay(5);
   Serial.println("Rainbow and rainbow cycle with time decaying maximum intensity");
+  for(int pin = 4;pin <=6;pin++){
+    pinMode(pin, INPUT);
+    digitalWrite(pin, HIGH); //turn on pullup resistor
+  }
 }
 
 
 void loop() {
   // Some example procedures showing how to display to the pixels
-  //rainbow(20);
-  rainbowCycle(20);
+  pin13state = !pin13state;
+  digitalWrite(13, pin13state);
+  colorWipe(Color(255, 0, 0), 150);
+  colorWipe(Color(0, 255, 0), 150);
+  colorWipe(Color(0, 0, 255), 150);
+  rainbow(50);
+  rainbowCycle(50);
+}
+
+void readbuttons(){
+  // need to rewrite this to use another variable rather than using a delay to debounce
+  for(int pin = 4;pin <=6;pin++){
+    if(digitalRead(pin) != buttons[pin]){
+      delay(5); // debounce
+      if(digitalRead(pin) != buttons[pin]){
+        buttons[pin] =  !buttons[pin];
+      }
+    }
+  }
 }
 
 void rainbow(uint8_t wait) {
@@ -75,7 +101,7 @@ void rainbow(uint8_t wait) {
       strip.setPixelColor(i, Wheel( (i + j) % 255));
     }  
     strip.show();   // write all the pixels out
-    delay(wait);
+    //delay(wait);
   }
 }
 
@@ -115,7 +141,7 @@ void colorWipe(uint32_t c, uint8_t wait) {
 uint32_t Color(byte r, byte g, byte b)
 {
   
-  int maxintensity = map(constrain(millis(),0,1800000),0,1800000,255,0);
+  int maxintensity = getmaxintensity();
   Serial.print("millis is ");
   Serial.println(millis());
   Serial.print("maxintensity is ");
@@ -123,13 +149,15 @@ uint32_t Color(byte r, byte g, byte b)
   r = (r > maxintensity) ? maxintensity : r;
   g = (g > maxintensity) ? maxintensity : g;
   b = (b > maxintensity) ? maxintensity : b;
-  Serial.print("RGB = ");
-  Serial.print(r);
-  Serial.print(" ");
-  Serial.print(g);
-  Serial.print(" ");
-  Serial.print(b);
-  Serial.println(" ");
+  if(debug >1){
+    Serial.print("RGB = ");
+    Serial.print(r);
+    Serial.print(" ");
+    Serial.print(g);
+    Serial.print(" ");
+    Serial.print(b);
+    Serial.println(" ");
+  }
 
   uint32_t c;
   c = r;
@@ -152,5 +180,18 @@ uint32_t Wheel(byte WheelPos)
   } else {
    WheelPos -= 170; 
    return Color(0, WheelPos * 3, 255 - WheelPos * 3);
+  }
+}
+
+int getmaxintensity (void){
+  long time = millis() / 1000; //Seconds
+  if(time < 600){ //first 10 minutes fade from 255 to 50
+    return int((-0.341 * time) + 255);
+  }else if(time < 1200){ //second 10 minutes fade from 50 to 10
+    return int((-0.0667 * time) + 90);
+  }else if(time < 1800){ //third 10 minutes fade from 10 to zero
+    return int((-0.0167 * time) + 30);
+  }else{
+    return 0;
   }
 }
