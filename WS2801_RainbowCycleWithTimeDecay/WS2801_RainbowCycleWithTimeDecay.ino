@@ -1,27 +1,28 @@
 #include "SPI.h"
 #include "Adafruit_WS2801.h"
+#include "Math.h"
 int debug = 0;
 /*****************************************************************************
-Example sketch for driving Adafruit WS2801 pixels!
-
-
-  Designed specifically to work with the Adafruit RGB Pixels!
-  12mm Bullet shape ----> https://www.adafruit.com/products/322
-  12mm Flat shape   ----> https://www.adafruit.com/products/738
-  36mm Square shape ----> https://www.adafruit.com/products/683
-
-  These pixels use SPI to transmit the color data, and have built in
-  high speed PWM drivers for 24 bit color per pixel
-  2 pins are required to interface
-
-  Adafruit invests time and resources providing this open source code, 
-  please support Adafruit and open-source hardware by purchasing 
-  products from Adafruit!
-
-  Written by Limor Fried/Ladyada for Adafruit Industries.  
-  BSD license, all text above must be included in any redistribution
-
-*****************************************************************************/
+ * Example sketch for driving Adafruit WS2801 pixels!
+ * 
+ * 
+ * Designed specifically to work with the Adafruit RGB Pixels!
+ * 12mm Bullet shape ----> https://www.adafruit.com/products/322
+ * 12mm Flat shape   ----> https://www.adafruit.com/products/738
+ * 36mm Square shape ----> https://www.adafruit.com/products/683
+ * 
+ * These pixels use SPI to transmit the color data, and have built in
+ * high speed PWM drivers for 24 bit color per pixel
+ * 2 pins are required to interface
+ * 
+ * Adafruit invests time and resources providing this open source code, 
+ * please support Adafruit and open-source hardware by purchasing 
+ * products from Adafruit!
+ * 
+ * Written by Limor Fried/Ladyada for Adafruit Industries.  
+ * BSD license, all text above must be included in any redistribution
+ * 
+ *****************************************************************************/
 
 // Choose which 2 pins you will use for output.
 // Can be any valid output pins.
@@ -32,7 +33,8 @@ int clockPin = 3;    // Green wire on Adafruit Pixels
 
 //Buttons on pins 4, 5, and 6. Using an array to track state.
 // buttons[0] - buttons[3] will never be used.
-boolean buttons[] = {false, false, false, false, false, false, false};
+boolean buttons[] = {
+  false, false, false, false, false, false, false};
 
 // Don't forget to connect the ground wire to Arduino ground,
 // and the +5V wire to a +5V supply
@@ -54,8 +56,9 @@ Adafruit_WS2801 strip = Adafruit_WS2801(20, dataPin, clockPin, WS2801_GRB);
 //Adafruit_WS2801 strip = Adafruit_WS2801(25, WS2801_GRB);
 
 boolean pin13state = false;
+uint32_t pixels[20];
 void setup() {
-    
+
   strip.begin();
 
   // Update LED contents, to start they are all 'off'
@@ -67,6 +70,12 @@ void setup() {
     pinMode(pin, INPUT);
     digitalWrite(pin, HIGH); //turn on pullup resistor
   }
+
+
+  for(int i=0;i<strip.numPixels();i++){
+    pixels[i] = random(0, pow(2,24));
+  }
+
 }
 
 
@@ -74,11 +83,24 @@ void loop() {
   // Some example procedures showing how to display to the pixels
   pin13state = !pin13state;
   digitalWrite(13, pin13state);
-  colorWipe(Color(255, 0, 0), 150);
-  colorWipe(Color(0, 255, 0), 150);
-  colorWipe(Color(0, 0, 255), 150);
-  rainbow(50);
-  rainbowCycle(50);
+  for(int i=0;i<strip.numPixels();i++){
+
+    if(pixels[i] >= pow(2,24)){
+      pixels[i] = 0;
+      Serial.println("Zero out");
+    }
+    else{
+      pixels[i] += 1;
+      //Serial.println("Increment");
+      strip.setPixelColor(i, pixels[i]);
+    }
+    strip.show();
+    //Serial.println("strip.show");
+    //Serial.print(i);
+    //Serial.print(" ");
+    //Serial.println(pixels[i]);
+  }
+
 }
 
 void readbuttons(){
@@ -95,7 +117,7 @@ void readbuttons(){
 
 void rainbow(uint8_t wait) {
   int i, j;
-   
+
   for (j=0; j < 256; j++) {     // 3 cycles of all 256 colors in the wheel
     for (i=0; i < strip.numPixels(); i++) {
       strip.setPixelColor(i, Wheel( (i + j) % 255));
@@ -109,7 +131,7 @@ void rainbow(uint8_t wait) {
 // along the chain
 void rainbowCycle(uint8_t wait) {
   int i, j;
-  
+
   for (j=0; j < 256 * 5; j++) {     // 5 cycles of all 25 colors in the wheel
     for (i=0; i < strip.numPixels(); i++) {
       // tricky math! we use each pixel as a fraction of the full 96-color wheel
@@ -127,11 +149,11 @@ void rainbowCycle(uint8_t wait) {
 // good for testing purposes
 void colorWipe(uint32_t c, uint8_t wait) {
   int i;
-  
+
   for (i=0; i < strip.numPixels(); i++) {
-      strip.setPixelColor(i, c);
-      strip.show();
-      delay(wait);
+    strip.setPixelColor(i, c);
+    strip.show();
+    delay(wait);
   }
 }
 
@@ -140,7 +162,7 @@ void colorWipe(uint32_t c, uint8_t wait) {
 // Create a 24 bit color value from R,G,B
 uint32_t Color(byte r, byte g, byte b)
 {
-  
+
   int maxintensity = getmaxintensity();
   Serial.print("millis is ");
   Serial.println(millis());
@@ -173,13 +195,15 @@ uint32_t Color(byte r, byte g, byte b)
 uint32_t Wheel(byte WheelPos)
 {
   if (WheelPos < 85) {
-   return Color(WheelPos * 3, 255 - WheelPos * 3, 0);
-  } else if (WheelPos < 170) {
-   WheelPos -= 85;
-   return Color(255 - WheelPos * 3, 0, WheelPos * 3);
-  } else {
-   WheelPos -= 170; 
-   return Color(0, WheelPos * 3, 255 - WheelPos * 3);
+    return Color(WheelPos * 3, 255 - WheelPos * 3, 0);
+  } 
+  else if (WheelPos < 170) {
+    WheelPos -= 85;
+    return Color(255 - WheelPos * 3, 0, WheelPos * 3);
+  } 
+  else {
+    WheelPos -= 170; 
+    return Color(0, WheelPos * 3, 255 - WheelPos * 3);
   }
 }
 
@@ -187,11 +211,17 @@ int getmaxintensity (void){
   long time = millis() / 1000; //Seconds
   if(time < 600){ //first 10 minutes fade from 255 to 50
     return int((-0.341 * time) + 255);
-  }else if(time < 1200){ //second 10 minutes fade from 50 to 10
+  }
+  else if(time < 1200){ //second 10 minutes fade from 50 to 10
     return int((-0.0667 * time) + 90);
-  }else if(time < 1800){ //third 10 minutes fade from 10 to zero
+  }
+  else if(time < 1800){ //third 10 minutes fade from 10 to zero
     return int((-0.0167 * time) + 30);
-  }else{
+  }
+  else{
     return 0;
   }
 }
+
+
+
