@@ -1,6 +1,5 @@
 #include "SPI.h"
 #include "Adafruit_WS2801.h"
-#include "Math.h"
 int debug = 0;
 /*****************************************************************************
  * Example sketch for driving Adafruit WS2801 pixels!
@@ -31,11 +30,6 @@ int debug = 0;
 int dataPin  = 2;    // Yellow wire on Adafruit Pixels
 int clockPin = 3;    // Green wire on Adafruit Pixels
 
-//Buttons on pins 4, 5, and 6. Using an array to track state.
-// buttons[0] - buttons[3] will never be used.
-boolean buttons[] = {
-  false, false, false, false, false, false, false};
-
 // Don't forget to connect the ground wire to Arduino ground,
 // and the +5V wire to a +5V supply
 
@@ -55,8 +49,21 @@ Adafruit_WS2801 strip = Adafruit_WS2801(20, dataPin, clockPin, WS2801_GRB);
 //Adafruit_WS2801 strip = Adafruit_WS2801(25, dataPin, clockPin, WS2801_GRB);
 //Adafruit_WS2801 strip = Adafruit_WS2801(25, WS2801_GRB);
 
+#define DEBOUNCE 10  // button debouncer, how many ms to debounce, 5+ ms is usually plenty
+
+// here is where we define the buttons that we'll use. button "1" is the first, button "6" is the 6th, etc
+byte buttons[] = {
+  4, 5, 6}; // the analog 0-5 pins are also known as 14-19
+// This handy macro lets us determine how big the array up above is, by checking the size
+#define NUMBUTTONS sizeof(buttons)
+// we will track if a button is just pressed, just released, or 'currently pressed' 
+byte pressed[NUMBUTTONS], justpressed[NUMBUTTONS], justreleased[NUMBUTTONS];
+
 boolean pin13state = false;
-uint32_t pixels[20];
+byte lightMode = 0;
+unsigned long startTime = millis();
+byte numberOfModes = 6;
+
 void setup() {
 
   strip.begin();
@@ -64,18 +71,13 @@ void setup() {
   // Update LED contents, to start they are all 'off'
   strip.show();
   Serial.begin(9600);
-  //delay(5);
-  Serial.println("Rainbow and rainbow cycle with time decaying maximum intensity");
-  for(int pin = 4;pin <=6;pin++){
-    pinMode(pin, INPUT);
-    digitalWrite(pin, HIGH); //turn on pullup resistor
+  Serial.println("Rainbow and rainbow cycle with time decaying maximum intensity and button detection");
+  // Make input & enable pull-up resistors on switch pins
+  for (byte i=0; i< NUMBUTTONS; i++) {
+    pinMode(buttons[i], INPUT);
+    digitalWrite(buttons[i], HIGH);
+    Serial.println("Setting button to input");
   }
-
-
-  for(int i=0;i<strip.numPixels();i++){
-    pixels[i] = random(0, pow(2,24));
-  }
-
 }
 
 
@@ -83,24 +85,87 @@ void loop() {
   // Some example procedures showing how to display to the pixels
   pin13state = !pin13state;
   digitalWrite(13, pin13state);
-  for(int i=0;i<strip.numPixels();i++){
 
-    if(pixels[i] >= pow(2,24)){
-      pixels[i] = 0;
-      Serial.println("Zero out");
-    }
-    else{
-      pixels[i] += 1;
-      //Serial.println("Increment");
-      strip.setPixelColor(i, pixels[i]);
-    }
-    strip.show();
-    //Serial.println("strip.show");
-    //Serial.print(i);
-    //Serial.print(" ");
-    //Serial.println(pixels[i]);
+
+  if(lightMode == 0){
+    Serial.print("Mode ");
+    Serial.print(lightMode);
+    Serial.println(": Rainbow");
+    rainbow(50);
   }
-
+  if(lightMode == 1){
+    Serial.print("Mode ");
+    Serial.print(lightMode);
+    Serial.println(": Rainbow Cycle");
+    rainbowCycle(50);
+  }
+  //  if(lightMode == 2){
+  //    Serial.println("Mode two: Color Wipes");
+  //    colorWipes(150);
+  //  }
+  if(lightMode == 2){
+    Serial.print("Mode ");
+    Serial.print(lightMode);
+    Serial.println(": Red");
+    byte r=255;
+    colorWipe(Color(r, 0, 0), 100);
+  }
+  if(lightMode == 3){
+    Serial.print("Mode ");
+    Serial.print(lightMode);
+    Serial.println(": Green");
+    for (int i=0; i < strip.numPixels(); i++) {
+      byte r = random(20);
+      byte g = 255;
+      byte b = random(20);
+      strip.setPixelColor(i, Color(r, g, b));
+      strip.show();
+      delay(100);
+      if(detect_modechange()){
+        break;
+      }
+    }
+  }
+  if(lightMode == 4){
+    Serial.print("Mode ");
+    Serial.print(lightMode);
+    Serial.println(": Blue");
+    for (int i=0; i < strip.numPixels(); i++) {
+      byte r = random(20);
+      byte g = random(20);
+      byte b = 255;
+      strip.setPixelColor(i, Color(r, g, b));
+      strip.show();
+      delay(100);
+      if(detect_modechange()){
+        break;
+      }
+    }
+  }
+  if(lightMode == 5){
+    Serial.print("Mode ");
+    Serial.print(lightMode);
+    Serial.println(": Red+Blue");
+    for (int i=0; i < strip.numPixels(); i++) {
+      byte r = 255;
+      byte g = random(20);
+      byte b = 255;
+      strip.setPixelColor(i, Color(r, g, b));
+      strip.show();
+      delay(100);
+      if(detect_modechange()){
+        break;
+      }
+    }
+  }
+  if(lightMode == 6){
+    Serial.print("Mode ");
+    Serial.print(lightMode);
+    Serial.println(": Red+Blue+Green");
+    colorWipe(Color(255, 255, 255), 100);
+  }
+  //rainbow(50);
+  //rainbowCycle(50);
 }
 
 void readbuttons(){
@@ -123,7 +188,10 @@ void rainbow(uint8_t wait) {
       strip.setPixelColor(i, Wheel( (i + j) % 255));
     }  
     strip.show();   // write all the pixels out
-    //delay(wait);
+    delay(wait);
+    if(detect_modechange()){
+      return;
+    }
   }
 }
 
@@ -142,9 +210,32 @@ void rainbowCycle(uint8_t wait) {
     }  
     strip.show();   // write all the pixels out
     delay(wait);
+    if(detect_modechange()){
+      return;
+    }
   }
 }
 
+void colorWipes(uint8_t wait){
+  for(byte r=0;r<256;r++){
+    colorWipe(Color(r, 0, 0), wait);
+    if(detect_modechange()){
+      return;
+    }
+  }
+  for(byte g=0;g<256;g++){
+    colorWipe(Color(0, g, 0), wait);
+    if(detect_modechange()){
+      return;
+    }
+  }
+  for(byte b=0;b<256;b++){
+    colorWipe(Color(0, 0, b), wait);
+    if(detect_modechange()){
+      return;
+    }
+  }
+}
 // fill the dots one after the other with said color
 // good for testing purposes
 void colorWipe(uint32_t c, uint8_t wait) {
@@ -154,6 +245,9 @@ void colorWipe(uint32_t c, uint8_t wait) {
     strip.setPixelColor(i, c);
     strip.show();
     delay(wait);
+    if(detect_modechange()){
+      return;
+    }
   }
 }
 
@@ -164,10 +258,10 @@ uint32_t Color(byte r, byte g, byte b)
 {
 
   int maxintensity = getmaxintensity();
-  Serial.print("millis is ");
-  Serial.println(millis());
-  Serial.print("maxintensity is ");
-  Serial.println(maxintensity);
+  //Serial.print("millis is ");
+  //Serial.println(millis());
+  //Serial.print("maxintensity is ");
+  //Serial.println(maxintensity);
   r = (r > maxintensity) ? maxintensity : r;
   g = (g > maxintensity) ? maxintensity : g;
   b = (b > maxintensity) ? maxintensity : b;
@@ -208,7 +302,7 @@ uint32_t Wheel(byte WheelPos)
 }
 
 int getmaxintensity (void){
-  long time = millis() / 1000; //Seconds
+  long time = (millis() - startTime) / 1000; //Seconds
   if(time < 600){ //first 10 minutes fade from 255 to 50
     return int((-0.341 * time) + 255);
   }
@@ -218,10 +312,103 @@ int getmaxintensity (void){
   else if(time < 1800){ //third 10 minutes fade from 10 to zero
     return int((-0.0167 * time) + 30);
   }
+  else if(time < 2400){
+    return 1;
+  }
   else{
     return 0;
   }
 }
+
+void check_switches()
+{
+  //Serial.println("Checking switches");
+  static byte previousstate[NUMBUTTONS];
+  static byte currentstate[NUMBUTTONS];
+  static long lasttime;
+  byte index;
+
+  if (millis() < lasttime) {
+    // we wrapped around, lets just try again
+    lasttime = millis();
+  }
+
+  if ((lasttime + DEBOUNCE) > millis()) {
+    // not enough time has passed to debounce
+    return; 
+  }
+  // ok we have waited DEBOUNCE milliseconds, lets reset the timer
+  lasttime = millis();
+
+  for (index = 0; index < NUMBUTTONS; index++) {
+    justpressed[index] = 0;       // when we start, we clear out the "just" indicators
+    justreleased[index] = 0;
+
+    currentstate[index] = digitalRead(buttons[index]);   // read the button
+
+
+    //Serial.print(index, DEC);
+    //Serial.print(": cstate=");
+    //Serial.print(currentstate[index], DEC);
+    //Serial.print(", pstate=");
+    //Serial.print(previousstate[index], DEC);
+    //Serial.print(", press=");
+
+
+    if (currentstate[index] == previousstate[index]) {
+      if ((pressed[index] == LOW) && (currentstate[index] == LOW)) {
+        // just pressed
+        justpressed[index] = 1;
+      }
+      else if ((pressed[index] == HIGH) && (currentstate[index] == HIGH)) {
+        // just released
+        justreleased[index] = 1;
+      }
+      pressed[index] = !currentstate[index];  // remember, digital HIGH means NOT pressed
+    }
+    //Serial.println(pressed[index], DEC);
+    previousstate[index] = currentstate[index];   // keep a running tally of the buttons
+  }
+}
+
+byte detect_modechange(){
+  //Serial.println("Checking for mode change");
+  byte modeChange = 0;
+  check_switches();
+  if(justpressed[0]){
+    modeChange++;
+    lightMode++;
+    if(lightMode > numberOfModes){
+      lightMode = 0;
+    }
+  }
+  if(justpressed[1]){
+    startTime = millis();
+  }
+  if(justpressed[2]){
+    startTime -= 600000; // Advance the clock 10 minutes
+  }
+  if(modeChange){
+    Serial.print("Mode changed to ");
+    Serial.println(lightMode);
+  }
+  return modeChange;
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
