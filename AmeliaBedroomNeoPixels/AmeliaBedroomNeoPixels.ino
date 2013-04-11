@@ -22,24 +22,48 @@ void loop() {
     Serial.println(i);
     int pixdelay;
     if(i>150){
-      pixdelay = 10;
-    }else if(i>10){
-      pixdelay = 50;
-    }else{
-      pixdelay = 100;
+      pixdelay = 30;
     }
-    colorWipe(strip.Color(i, 0, 0), pixdelay); // Red
+    else if(i>70){ //50
+      if(i == 150){
+        Serial.print(millis()/60000);
+        Serial.println(" Minutes");
+      }
+      pixdelay = 80; //60
+    }
+    else{
+      if(i == 70){
+        Serial.print(millis()/60000);
+        Serial.println(" Minutes");
+      }
+      pixdelay = 200; //150
+    }
+    colorWipe(strip.Color(i, random(0,int(i/10)),random(0,int(i/10))), pixdelay); // Red
   }
+  Serial.print(millis()/60000);
+  Serial.println(" Minutes");
   for(int pixel=0;pixel<strip.numPixels();pixel++){
     strip.setPixelColor(pixel, strip.Color(random(0,4),random(0,4),random(0,4)));
     strip.show();
-    delay(3000);
+    delay(4000);
   }
+  Serial.print(millis()/60000);
+  Serial.println(" Minutes");
+  for(int pixel=0;pixel<strip.numPixels();pixel++){
+    strip.setPixelColor(pixel, strip.Color(1,0,0));
+    strip.show();
+    delay(4000);
+  }
+  Serial.print(millis()/60000);
+  Serial.println(" Minutes");
   for(int pixel=0;pixel<strip.numPixels();pixel++){
     strip.setPixelColor(pixel, strip.Color(0,0,0));
     strip.show();
-    delay(3000);
+    delay(4000);
   }
+  Serial.print(millis()/60000);
+  Serial.println(" Minutes");
+  Serial.println("Good night! :-)");
   while(1){
     delay(10000);
   }
@@ -98,5 +122,6 @@ uint32_t Wheel(byte WheelPos) {
     return strip.Color(0, WheelPos * 3, 255 - WheelPos * 3);
   }
 }
+
 
 
