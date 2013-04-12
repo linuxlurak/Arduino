@@ -2,26 +2,26 @@
 #include "Adafruit_WS2801.h"
 
 /*****************************************************************************
-Example sketch for driving Adafruit WS2801 pixels!
-
-
-  Designed specifically to work with the Adafruit RGB Pixels!
-  12mm Bullet shape ----> https://www.adafruit.com/products/322
-  12mm Flat shape   ----> https://www.adafruit.com/products/738
-  36mm Square shape ----> https://www.adafruit.com/products/683
-
-  These pixels use SPI to transmit the color data, and have built in
-  high speed PWM drivers for 24 bit color per pixel
-  2 pins are required to interface
-
-  Adafruit invests time and resources providing this open source code, 
-  please support Adafruit and open-source hardware by purchasing 
-  products from Adafruit!
-
-  Written by Limor Fried/Ladyada for Adafruit Industries.  
-  BSD license, all text above must be included in any redistribution
-
-*****************************************************************************/
+ * Example sketch for driving Adafruit WS2801 pixels!
+ * 
+ * 
+ * Designed specifically to work with the Adafruit RGB Pixels!
+ * 12mm Bullet shape ----> https://www.adafruit.com/products/322
+ * 12mm Flat shape   ----> https://www.adafruit.com/products/738
+ * 36mm Square shape ----> https://www.adafruit.com/products/683
+ * 
+ * These pixels use SPI to transmit the color data, and have built in
+ * high speed PWM drivers for 24 bit color per pixel
+ * 2 pins are required to interface
+ * 
+ * Adafruit invests time and resources providing this open source code, 
+ * please support Adafruit and open-source hardware by purchasing 
+ * products from Adafruit!
+ * 
+ * Written by Limor Fried/Ladyada for Adafruit Industries.  
+ * BSD license, all text above must be included in any redistribution
+ * 
+ *****************************************************************************/
 
 // Choose which 2 pins you will use for output.
 // Can be any valid output pins.
@@ -49,19 +49,30 @@ Adafruit_WS2801 strip = Adafruit_WS2801(25, dataPin, clockPin);
 //Adafruit_WS2801 strip = Adafruit_WS2801(25, dataPin, clockPin, WS2801_GRB);
 //Adafruit_WS2801 strip = Adafruit_WS2801(25, WS2801_GRB);
 
+boolean standby = true;
+
 void setup() {
   randomSeed(1);
   pinMode(10, OUTPUT); //For panel voltmeter
   pinMode(11, OUTPUT); //For panel voltmeter
+  pinMode(4, INPUT); //For state change from idle to active
+  digitalWrite(4, HIGH); //Enable internal pullup resistor
   strip.begin();
 
   // Update LED contents, to start they are all 'off'
   strip.show();
+  while(standby == true){
+    //while(1){
+    fadeToTarget(random(20,255),random(20,255),random(20,255),100);
+  }
+  for(int interval=100;interval>0;interval-=5){
+    fadeToTarget(random(20,255),random(20,255),random(20,255),interval);
+  }
+  Serial.println("Starting colorwipe sequence");
 }
 
 
 void loop() {
-  // Some example procedures showing how to display to the pixels
 
   int sweepDelay = random(200);
   analogWrite(10,random(0,255));
@@ -81,9 +92,55 @@ void loop() {
   //rainbowCycle(20);
 }
 
+void fadeToTarget(int rTarget, int gTarget, int bTarget, int interval){
+  static int r=0;
+  static int g=0;
+  static int b=0;
+
+  while(r!=rTarget || g!=gTarget || b!=bTarget){
+    if(digitalRead(4) == LOW && standby == true){
+      standby = false;
+      break;
+    }
+    r=convergeColorValue(r,rTarget);
+    g=convergeColorValue(g,gTarget);
+    b=convergeColorValue(b,bTarget);
+    for (int i=0; i < strip.numPixels(); i++) {
+      strip.setPixelColor(i, Color(r,g,b));
+    }
+    if(standby == false){
+      Serial.print(interval);
+      Serial.print(": ");
+    }
+    char statusMsg[90];
+    sprintf(statusMsg, "r -> rTarget: %d -> %d, g -> gTarget: %d -> %d, b -> bTarget: %d -> %d", r, rTarget, g, gTarget, b, bTarget);
+    Serial.println(statusMsg);
+    strip.show();
+    delay(interval);
+  }
+
+}
+int convergeColorValue(int current, int target){
+  if(current<target){
+    current++;
+  }
+  else if(current>target){
+    current--;
+  }
+  if(standby == false){ // if we have exited standby mode, add an extra increment/decrement to move us towards target faster
+    if(current<target){
+      current++;
+    }
+    else if(current>target){
+      current--;
+    }
+  }
+  return current;
+}
+
 void rainbow(uint8_t wait) {
   int i, j;
-   
+
   for (j=0; j < 256; j++) {     // 3 cycles of all 256 colors in the wheel
     for (i=0; i < strip.numPixels(); i++) {
       strip.setPixelColor(i, Wheel( (i + j) % 255));
@@ -97,7 +154,7 @@ void rainbow(uint8_t wait) {
 // along the chain
 void rainbowCycle(uint8_t wait) {
   int i, j;
-  
+
   for (j=0; j < 256 * 5; j++) {     // 5 cycles of all 25 colors in the wheel
     for (i=0; i < strip.numPixels(); i++) {
       // tricky math! we use each pixel as a fraction of the full 96-color wheel
@@ -115,11 +172,11 @@ void rainbowCycle(uint8_t wait) {
 // good for testing purposes
 void colorWipe(uint32_t c, uint8_t wait) {
   int i;
-  
+
   for (i=0; i < strip.numPixels(); i++) {
-      strip.setPixelColor(i, c);
-      strip.show();
-      delay(wait);
+    strip.setPixelColor(i, c);
+    strip.show();
+    delay(wait);
   }
 }
 
@@ -142,12 +199,17 @@ uint32_t Color(byte r, byte g, byte b)
 uint32_t Wheel(byte WheelPos)
 {
   if (WheelPos < 85) {
-   return Color(WheelPos * 3, 255 - WheelPos * 3, 0);
-  } else if (WheelPos < 170) {
-   WheelPos -= 85;
-   return Color(255 - WheelPos * 3, 0, WheelPos * 3);
-  } else {
-   WheelPos -= 170; 
-   return Color(0, WheelPos * 3, 255 - WheelPos * 3);
+    return Color(WheelPos * 3, 255 - WheelPos * 3, 0);
+  } 
+  else if (WheelPos < 170) {
+    WheelPos -= 85;
+    return Color(255 - WheelPos * 3, 0, WheelPos * 3);
+  } 
+  else {
+    WheelPos -= 170; 
+    return Color(0, WheelPos * 3, 255 - WheelPos * 3);
   }
 }
+
+
+

@@ -30,6 +30,13 @@
 uint8_t dataPin  = 2;    // Yellow wire on Adafruit Pixels
 uint8_t clockPin = 3;    // Green wire on Adafruit Pixels
 
+// Pin 5 = Panel voltmeter 1
+// Pin 6 = Panel voltmeter 2
+int redPin = 9; // Output pins for connection to
+int greenPin = 10;
+int bluePin = 11;
+
+boolean standby = true;
 // Don't forget to connect the ground wire to Arduino ground,
 // and the +5V wire to a +5V supply
 
@@ -43,10 +50,15 @@ void setup() {
 
   // Update LED contents, to start they are all 'off'
   strip.show();
+  pinMode(redPin, OUTPUT);
+  pinMode(greenPin, OUTPUT);
+  pinMode(bluePin, OUTPUT);
 }
 
 
 void loop() {
+  Serial.println("");
+  Serial.println("Top of Loop");
   // Some example procedures showing how to display to the pixels
   //drawX(4, 4, 100);
   //bounce(4, 5, 50);
@@ -71,13 +83,55 @@ void loop() {
 }
 
 void randomAnalogPins(void){
-    analogWrite(9,random(40,255));
-    analogWrite(10,random(40,255));
-    analogWrite(11,random(20,255));
+    analogWrite(5,random(40,255));
+    analogWrite(6,random(40,255));
+}
+
+void changeStriplight(void){
+  static int red=255;
+  static int green=255;
+  static int blue=255;
+  static int rTarget = random(255);
+  static int gTarget = random(255);
+  static int bTarget = random(255);
+  
+  if(red == rTarget && green == gTarget && blue == bTarget){
+    rTarget = random(255);
+    gTarget = random(255);
+    bTarget = random(255);
+    Serial.println("");
+    Serial.print("new target: ");
+  }
+  red = convergeColorValue(red, rTarget);
+  green = convergeColorValue(green, gTarget);
+  blue = convergeColorValue(blue, bTarget);
+  analogWrite(redPin, red);
+  analogWrite(greenPin, green);
+  analogWrite(bluePin, blue);
+  Serial.print(".");
+}
+
+int convergeColorValue(int current, int target){
+  if(current<target){
+    current++;
+  }
+  else if(current>target){
+    current--;
+  }
+  if(standby == false){ // if we have exited standby mode, add an extra increment/decrement to move us towards target faster
+    if(current<target){
+      current++;
+    }
+    else if(current>target){
+      current--;
+    }
+  }
+  return current;
 }
 
 void rollRight(int r, int g, int b, long wait) {
   for (int x=0;x<4;x++) {
+    changeStriplight();
     for (int y=0;y<5;y++){
       strip.setPixelColor(x,y,r,g,b);
     }
@@ -91,6 +145,7 @@ void rollRight(int r, int g, int b, long wait) {
 }
 void rollLeft(int r, int g, int b, long wait) {
   for (int x=3;x>=0;x--) {
+    changeStriplight();
     for (int y=0;y<5;y++){
       strip.setPixelColor(x,y,r,g,b);
     }
@@ -104,6 +159,7 @@ void rollLeft(int r, int g, int b, long wait) {
 }
 void rollUp(int r, int g, int b, long wait) {
   for (int y=4;y>=0;y--) {
+    changeStriplight();
     for (int x=0;x<5;x++){
       strip.setPixelColor(x,y,r,g,b);
     }
@@ -117,6 +173,7 @@ void rollUp(int r, int g, int b, long wait) {
 }
 void rollDown(int r, int g, int b, long wait) {
   for (int y=0;y<5;y++) {
+    changeStriplight();
     for (int x=0;x<5;x++){
       strip.setPixelColor(x,y,r,g,b);
     }
