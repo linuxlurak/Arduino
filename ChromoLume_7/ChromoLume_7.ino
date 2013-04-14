@@ -53,8 +53,6 @@ boolean standby = true;
 
 void setup() {
   randomSeed(1);
-  pinMode(10, OUTPUT); //For panel voltmeter
-  pinMode(11, OUTPUT); //For panel voltmeter
   pinMode(4, INPUT); //For state change from idle to active
   digitalWrite(4, HIGH); //Enable internal pullup resistor
   strip.begin();
@@ -75,21 +73,9 @@ void setup() {
 void loop() {
 
   int sweepDelay = random(200);
-  analogWrite(10,random(0,255));
-  analogWrite(11,random(0,255));  
   colorWipe(Color(random(255), random(255), 0), sweepDelay);
-  analogWrite(10,random(0,255));
-  analogWrite(11,random(0,255));
   colorWipe(Color(0, random(255), random(255)), sweepDelay);
-  analogWrite(10,random(0,255));
-  analogWrite(11,random(0,255));
   colorWipe(Color(random(255), 0, random(255)), sweepDelay);
-  //analogWrite(10,random(0,255));
-  //analogWrite(11,random(0,255));
-  //rainbow(20);
-  //analogWrite(10,random(0,255));
-  //analogWrite(11,random(0,255));
-  //rainbowCycle(20);
 }
 
 void fadeToTarget(int rTarget, int gTarget, int bTarget, int interval){
