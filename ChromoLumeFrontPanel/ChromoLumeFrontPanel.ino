@@ -32,7 +32,7 @@ uint8_t clockPin = 3;    // Green wire on Adafruit Pixels
 
 // Pin 5 = Panel voltmeter 1
 // Pin 6 = Panel voltmeter 2
-int redPin = 9; // Output pins for connection to
+int redPin = 9; // Output pins for connection to analog LED strip
 int greenPin = 10;
 int bluePin = 11;
 
