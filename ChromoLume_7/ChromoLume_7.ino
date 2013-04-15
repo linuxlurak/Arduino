@@ -51,14 +51,70 @@ Adafruit_WS2801 strip = Adafruit_WS2801(25, dataPin, clockPin);
 
 boolean standby = true;
 
+// Pin 4 to standby/activate mode switch
+// Pin 5 to control panel
 void setup() {
+  Serial.println("Reboot");
+
   randomSeed(1);
   pinMode(4, INPUT); //For state change from idle to active
   digitalWrite(4, HIGH); //Enable internal pullup resistor
+  pinMode(5, INPUT); // For signal from control panel
+  digitalWrite(5, HIGH);
   strip.begin();
 
   // Update LED contents, to start they are all 'off'
   strip.show();
+  for(int i=0;i<strip.numPixels();i++){
+    strip.setPixelColor(i,Color(0,255,0));
+  }
+  strip.show();
+  while(digitalRead(4)==HIGH){
+    //Wait for button press to start timed sequence
+  }
+  if(digitalRead(5)==LOW){
+    for(int i=0;i<strip.numPixels();i++){
+      strip.setPixelColor(i,Color(0,0,255));
+    }
+    strip.show();
+    Serial.println("pin 5 is LOW");
+  }
+  else{
+    for(int i=0;i<strip.numPixels();i++){
+      strip.setPixelColor(i,Color(255,0,0));
+    }
+    strip.show();
+    Serial.println("pin 5 is HIGH");
+  }
+
+  Serial.println("Fading out");
+  for(int g=255;g>=0;g--){
+    for(int i=0;i<strip.numPixels();i++){
+      strip.setPixelColor(i,Color(0,g,0));
+    }
+    strip.show();
+  }
+  //Serial.println("Pausing for 20 seconds");
+  //delay(20000);
+
+
+  int r = preactivation();
+  Serial.print(r);
+  Serial.println("R preactivation complete");
+  Serial.println("BREAKDOWN");
+  while(r>0){
+    for(int i=0;i<strip.numPixels();i++){
+      strip.setPixelColor(i,Color(r,0,0));
+    }
+    strip.show();
+    delay(100);
+    r--;
+  }
+  fadeToTarget(50,50,50,100);
+  //Serial.println("Rainbow");
+  //rainbow(50);
+  Serial.println("Going into standby mode");
+
   while(standby == true){
     //while(1){
     fadeToTarget(random(20,255),random(20,255),random(20,255),100);
@@ -78,10 +134,39 @@ void loop() {
   colorWipe(Color(random(255), 0, random(255)), sweepDelay);
 }
 
+int preactivation(void){
+  Serial.println("Entering preactivation");
+  while(1){
+    for(int r=1;r<20;r++){
+      for(int i=0;i<strip.numPixels();i++){
+        strip.setPixelColor(i,Color(r,0,0));
+      }
+      strip.show();
+      if(digitalRead(5) == HIGH){
+        return(r);
+      }
+      delay(500);
+    }
+    for(int r=19;r>1;r--){
+      for(int i=0;i<strip.numPixels();i++){
+        strip.setPixelColor(i,Color(r,0,0));
+      }
+      strip.show();
+      if(digitalRead(5) == HIGH){
+        return(r);
+      }
+      delay(500);
+    }
+  }
+}
+
 void fadeToTarget(int rTarget, int gTarget, int bTarget, int interval){
   static int r=0;
   static int g=0;
   static int b=0;
+  char targetMsg[90];
+  sprintf(targetMsg, "rTarget: %03d, gTarget: %03d, bTarget: %03d", rTarget, gTarget, bTarget);
+  Serial.println(targetMsg);
 
   while(r!=rTarget || g!=gTarget || b!=bTarget){
     if(digitalRead(4) == LOW && standby == true){
@@ -95,12 +180,12 @@ void fadeToTarget(int rTarget, int gTarget, int bTarget, int interval){
       strip.setPixelColor(i, Color(r,g,b));
     }
     if(standby == false){
-      Serial.print(interval);
-      Serial.print(": ");
+      //Serial.print(interval);
+      //Serial.print(": ");
     }
     char statusMsg[90];
     sprintf(statusMsg, "r -> rTarget: %d -> %d, g -> gTarget: %d -> %d, b -> bTarget: %d -> %d", r, rTarget, g, gTarget, b, bTarget);
-    Serial.println(statusMsg);
+    //Serial.println(statusMsg);
     strip.show();
     delay(interval);
   }
@@ -196,6 +281,11 @@ uint32_t Wheel(byte WheelPos)
     return Color(0, WheelPos * 3, 255 - WheelPos * 3);
   }
 }
+
+
+
+
+
 
 
 

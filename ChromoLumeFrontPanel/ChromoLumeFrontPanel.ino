@@ -35,6 +35,7 @@ uint8_t clockPin = 3;    // Green wire on Adafruit Pixels
 int redPin = 9; // Output pins for connection to analog LED strip
 int greenPin = 10;
 int bluePin = 11;
+int signalToDisc = 4;
 
 boolean standby = true;
 // Don't forget to connect the ground wire to Arduino ground,
@@ -42,7 +43,7 @@ boolean standby = true;
 
 // Set the first variable to the NUMBER of pixels in a row and
 // the second value to number of pixels in a column.
-Adafruit_WS2801 strip = Adafruit_WS2801((uint16_t)4, (uint16_t)5, dataPin, clockPin);
+Adafruit_WS2801 strip = Adafruit_WS2801((uint16_t)4, (uint16_t)5, dataPin, clockPin, WS2801_GRB);
 
 void setup() {
 
@@ -50,19 +51,142 @@ void setup() {
 
   // Update LED contents, to start they are all 'off'
   strip.show();
+  pinMode(signalToDisc, OUTPUT);
+  digitalWrite(signalToDisc, LOW);
   pinMode(redPin, OUTPUT);
   pinMode(greenPin, OUTPUT);
   pinMode(bluePin, OUTPUT);
+  pinMode(7, INPUT);
+  pinMode(8, INPUT);
+  pinMode(12, INPUT);
+  digitalWrite(7, HIGH);
+  digitalWrite(8, HIGH);
+  digitalWrite(12, HIGH);
+  startupTest();
 }
 
 
 void loop() {
-  Serial.println("");
   Serial.println("Top of Loop");
   // Some example procedures showing how to display to the pixels
   //drawX(4, 4, 100);
   //bounce(4, 5, 50);
+  while(digitalRead(12)==HIGH){
+  }
+  while(digitalRead(12)==LOW){
+  }
+  delay(20);
+  preActivation();
+  breakdown();
+  preActivation();
+  showtime();
 
+}
+
+void breakdown(void){
+  Serial.println("Breakdown");
+  digitalWrite(signalToDisc, HIGH);
+
+  analogWrite(5, 0);
+  analogWrite(6, 0);
+  for(int i=0;i<strip.numPixels();i++){
+    strip.setPixelColor(i,Color(0,0,0));
+  }
+  strip.show();
+  analogWrite(redPin, 0);
+  analogWrite(greenPin, 0);
+  analogWrite(bluePin, 0);
+  delay(500);
+  while(1){
+    if(digitalRead(7)==LOW){
+      return;
+    }
+    if(digitalRead(8)==LOW){
+      return;
+    }
+    if(digitalRead(12)==LOW){
+      while(digitalRead(12)==LOW){
+      }
+      return;
+    }
+    delay(100);
+  }
+}
+
+void preActivation(){
+  Serial.println("Preactivation");
+  char message[90];
+  int pin5 = 30;
+  int pin5change = 1;
+  int pin6 = 255;
+  int pin6change = -1;
+  int red=0;
+  int redchange = 1;
+  long wheelPos = 0;
+  analogWrite(redPin, 0);
+  analogWrite(greenPin, 0);
+  analogWrite(bluePin, 0);
+
+
+  while(1){
+    long iterationCount = 0;
+    analogWrite(5, pin5);
+    analogWrite(6, pin6);
+    sprintf(message, "pin5=%03d, pin6=%03d", pin5, pin6);
+    //Serial.println(message);
+    pin5 = pin5 + pin5change;
+    pin6 = pin6 + pin6change;
+    if(pin5 > 254){
+      pin5change = -1;
+    }
+    else if(pin5 < 30){
+      pin5change = 1;
+    }
+    if(pin6 > 254){
+      pin6change = -1;
+    }
+    else if(pin6 < 30){
+      pin6change = 1;
+    }
+
+    if(1){ // making this always true for now
+      for(int i=0;i<strip.numPixels();i++){
+        strip.setPixelColor(i,Color(red,0,0));
+        sprintf(message, "Pixel: %03d is red: %03d, Color is %d", i, red, Color(red,0,0));
+        //Serial.println(message);
+      }
+      strip.show();
+
+      red = red + redchange;
+      if(red > 30){
+        redchange = -1;
+      }
+      else if (red < 20){
+        redchange = 1;
+      }
+    }
+    analogWrite(redPin, WheelRed(wheelPos));
+    analogWrite(greenPin, WheelGreen(wheelPos));
+    analogWrite(bluePin, WheelBlue(wheelPos));
+    wheelPos++;
+    //changeStriplight();
+    if(digitalRead(7)==LOW){
+      return;
+    }
+    if(digitalRead(8)==LOW){
+      return;
+    }
+    if(digitalRead(12)==LOW){
+      while(digitalRead(12)==LOW){
+      }
+      return;
+    }
+    delay(250);
+  }
+}
+
+void showtime(void){
+  Serial.println("Showtime!!!!");
   randomAnalogPins();
   for(int count=random(20);count>=0;count--){
     rollUp(random(255),random(255),random(255),random(250));
@@ -83,24 +207,27 @@ void loop() {
 }
 
 void randomAnalogPins(void){
-    analogWrite(5,random(40,255));
-    analogWrite(6,random(40,255));
+  analogWrite(5,random(40,255));
+  analogWrite(6,random(40,255));
 }
 
 void changeStriplight(void){
-  static int red=255;
-  static int green=255;
-  static int blue=255;
+  static int red=0;
+  static int green=0;
+  static int blue=0;
   static int rTarget = random(255);
   static int gTarget = random(255);
   static int bTarget = random(255);
-  
+
   if(red == rTarget && green == gTarget && blue == bTarget){
-    rTarget = random(255);
     gTarget = random(255);
     bTarget = random(255);
-    Serial.println("");
-    Serial.print("new target: ");
+    long gplusb = gTarget + bTarget;
+    long fiveTenMinusgplusb = 510 - gplusb;
+    rTarget = random(min(255,fiveTenMinusgplusb));
+    char targetMsg[90];
+    sprintf(targetMsg, "rTarget: %03d, gTarget: %03d, bTarget: %03d", rTarget, gTarget, bTarget);
+    Serial.println(targetMsg);
   }
   red = convergeColorValue(red, rTarget);
   green = convergeColorValue(green, gTarget);
@@ -108,9 +235,39 @@ void changeStriplight(void){
   analogWrite(redPin, red);
   analogWrite(greenPin, green);
   analogWrite(bluePin, blue);
-  Serial.print(".");
+  //Serial.print(".");
 }
 
+void startupTest(void){
+  for(int i=0;i<strip.numPixels();i++){
+    strip.setPixelColor(i,Color(10,0,0));
+    strip.show();
+  }
+  for(int z=0;z<256;z++){
+    analogWrite(redPin, z);
+    delay(5);
+  }
+  for(int z=255;z>=0;z--){
+    analogWrite(redPin, z);
+    delay(5);
+  }
+  for(int z=0;z<256;z++){
+    analogWrite(greenPin, z);
+    delay(5);
+  }
+  for(int z=255;z>=0;z--){
+    analogWrite(greenPin, z);
+    delay(5);
+  }
+  for(int z=0;z<256;z++){
+    analogWrite(bluePin, z);
+    delay(5);
+  }
+  for(int z=255;z>=0;z--){
+    analogWrite(bluePin, z);
+    delay(5);
+  }
+}
 int convergeColorValue(int current, int target){
   if(current<target){
     current++;
@@ -237,12 +394,16 @@ void bounce(uint8_t w, uint8_t h, uint8_t wait) {
 // Create a 24 bit color value from R,G,B
 uint32_t Color(byte r, byte g, byte b)
 {
+  char message[90];
+  sprintf(message, "In Color function, red is %d, green is %d, blue is %d", r, g, b);
+  //Serial.println(message);
   uint32_t c;
   c = r;
   c <<= 8;
   c |= g;
   c <<= 8;
   c |= b;
+  //Serial.println(c, HEX);
   return c;
 }
 
@@ -262,4 +423,55 @@ uint32_t Wheel(byte WheelPos)
     return Color(0, WheelPos * 3, 255 - WheelPos * 3);
   }
 }
+
+int WheelRed(byte WheelPos)
+{
+  if (WheelPos < 85) {
+    return (WheelPos * 3);
+  } 
+  else if (WheelPos < 170) {
+    WheelPos -= 85;
+    return (255 - WheelPos * 3);
+  } 
+  else {
+    WheelPos -= 170; 
+    return 0;
+  }
+}
+
+int WheelGreen(byte WheelPos)
+{
+  if (WheelPos < 85) {
+    return (255 - WheelPos * 3);
+  } 
+  else if (WheelPos < 170) {
+    WheelPos -= 85;
+    return 0;
+  } 
+  else {
+    WheelPos -= 170; 
+    return (WheelPos * 3);
+  }
+}
+
+int WheelBlue(byte WheelPos)
+{
+  if (WheelPos < 85) {
+    return 0;
+  } 
+  else if (WheelPos < 170) {
+    WheelPos -= 85;
+    return (WheelPos * 3);
+  } 
+  else {
+    WheelPos -= 170; 
+    return (255 - WheelPos * 3);
+  }
+}
+
+
+
+
+
+
 
