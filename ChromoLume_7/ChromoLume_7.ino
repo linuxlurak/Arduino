@@ -50,6 +50,10 @@ Adafruit_WS2801 strip = Adafruit_WS2801(25, dataPin, clockPin);
 //Adafruit_WS2801 strip = Adafruit_WS2801(25, WS2801_GRB);
 
 boolean standby = true;
+boolean resetFlag = true;
+
+int signalFromBase = 5;
+int resetSwitch = 4;
 
 // Pin 4 to standby/activate mode switch
 // Pin 5 to control panel
@@ -57,105 +61,164 @@ void setup() {
   Serial.println("Reboot");
 
   randomSeed(1);
-  pinMode(4, INPUT); //For state change from idle to active
-  digitalWrite(4, HIGH); //Enable internal pullup resistor
-  pinMode(5, INPUT); // For signal from control panel
-  digitalWrite(5, HIGH);
+  pinMode(resetSwitch, INPUT); //For state change from idle to active
+  digitalWrite(resetSwitch, HIGH); //Enable internal pullup resistor
+  pinMode(signalFromBase, INPUT); // For signal from control panel
+  digitalWrite(signalFromBase, HIGH);
   strip.begin();
-
-  // Update LED contents, to start they are all 'off'
   strip.show();
-  for(int i=0;i<strip.numPixels();i++){
-    strip.setPixelColor(i,Color(0,255,0));
-  }
-  strip.show();
-  while(digitalRead(4)==HIGH){
-    //Wait for button press to start timed sequence
-  }
-  if(digitalRead(5)==LOW){
-    for(int i=0;i<strip.numPixels();i++){
-      strip.setPixelColor(i,Color(0,0,255));
-    }
-    strip.show();
-    Serial.println("pin 5 is LOW");
-  }
-  else{
-    for(int i=0;i<strip.numPixels();i++){
-      strip.setPixelColor(i,Color(255,0,0));
-    }
-    strip.show();
-    Serial.println("pin 5 is HIGH");
-  }
 
-  Serial.println("Fading out");
-  for(int g=255;g>=0;g--){
-    for(int i=0;i<strip.numPixels();i++){
-      strip.setPixelColor(i,Color(0,g,0));
-    }
-    strip.show();
-  }
-  //Serial.println("Pausing for 20 seconds");
-  //delay(20000);
-
-
-  int r = preactivation();
-  Serial.print(r);
-  Serial.println("R preactivation complete");
-  Serial.println("BREAKDOWN");
-  while(r>0){
-    for(int i=0;i<strip.numPixels();i++){
-      strip.setPixelColor(i,Color(r,0,0));
-    }
-    strip.show();
-    delay(100);
-    r--;
-  }
-  fadeToTarget(50,50,50,100);
-  //Serial.println("Rainbow");
-  //rainbow(50);
-  Serial.println("Going into standby mode");
-
-  while(standby == true){
-    //while(1){
-    fadeToTarget(random(20,255),random(20,255),random(20,255),100);
-  }
-  for(int interval=100;interval>0;interval-=5){
-    fadeToTarget(random(20,255),random(20,255),random(20,255),interval);
-  }
-  Serial.println("Starting colorwipe sequence");
 }
 
 
 void loop() {
 
-  int sweepDelay = random(200);
-  colorWipe(Color(random(255), random(255), 0), sweepDelay);
-  colorWipe(Color(0, random(255), random(255)), sweepDelay);
-  colorWipe(Color(random(255), 0, random(255)), sweepDelay);
+  startup();
+  idleMode();
+  preActivation();
+  breakdown();
+  preActivation();
+  showtime();
 }
 
-int preactivation(void){
-  Serial.println("Entering preactivation");
+void breakdown(void){
+  if(resetFlag == true){
+    return;
+  }
+  Serial.println("In breakdown waiting for base to go low");
+  while(digitalRead(signalFromBase) == HIGH){
+    // Wait for base to go low
+  }
+  delay(10);
+  Serial.println("BREAKDOWN");
+  for(int i=0;i<strip.numPixels();i++){
+    strip.setPixelColor(i,Color(0,0,0));
+  }
+  strip.show();
+
   while(1){
-    for(int r=1;r<20;r++){
-      for(int i=0;i<strip.numPixels();i++){
-        strip.setPixelColor(i,Color(r,0,0));
+    if(digitalRead(resetSwitch) == LOW){
+      delay(10);
+      if(digitalRead(resetSwitch) == LOW){
+        resetFlag = true;
+        return;
       }
-      strip.show();
-      if(digitalRead(5) == HIGH){
-        return(r);
-      }
-      delay(500);
     }
-    for(int r=19;r>1;r--){
-      for(int i=0;i<strip.numPixels();i++){
-        strip.setPixelColor(i,Color(r,0,0));
+    if(digitalRead(signalFromBase) == HIGH){
+      delay(10);
+      if(digitalRead(signalFromBase) == HIGH){
+        Serial.println("Waiting for base to go low before exiting breakdown");
+        while(digitalRead(signalFromBase) == HIGH){
+        }
+        return;
       }
-      strip.show();
-      if(digitalRead(5) == HIGH){
-        return(r);
+    }
+  }
+}
+
+void preActivation(void){
+  if(resetFlag == true){
+    return;
+  }
+  Serial.println("Entering preactivation stage");
+  while(1){
+    if(digitalRead(resetSwitch) == LOW){
+      delay(10);
+      if(digitalRead(resetSwitch) == LOW){
+        resetFlag = true;
+        return;
       }
-      delay(500);
+    }
+    if(digitalRead(signalFromBase) == HIGH){
+      delay(10);
+      if(digitalRead(signalFromBase) == HIGH){
+        return;
+      }
+    }
+    fadeToTarget(random(20,255),random(20,255),random(20,255),25);
+
+  }
+}
+
+void startup(void){
+  Serial.println("Starting up");
+  resetFlag = false;
+  for(int i=0;i<strip.numPixels();i++){
+    strip.setPixelColor(i,Color(255,0,0));
+  }
+  strip.show();
+  Serial.println("In startup, waiting for base to go low");
+  while(digitalRead(signalFromBase)==HIGH){
+    //Wait for base
+  }
+  long lowCount = 0;
+  while(digitalRead(signalFromBase) == LOW){
+    if(lowCount++ >=50){
+      break;
+    }
+    delay(10);
+  }
+  if(lowCount <50){
+    resetFlag = true;
+    Serial.println("Base didn't stay low long enough. Going around again.");
+    return;
+  }
+  Serial.println("Base is low. Disk set green. Startup complete");
+  for(int i=0;i<strip.numPixels();i++){
+    strip.setPixelColor(i,Color(0,255,0));
+  }
+  strip.show();
+}
+
+void showtime(void){
+  if(resetFlag == true){
+    return;
+  }
+  Serial.println("SHOWTIME!!!");
+  long showStart = millis();
+  while(1){
+    if((millis() - showStart) > 20000){
+      break;
+    }
+    if(digitalRead(resetSwitch) == LOW){
+      delay(10);
+      if(digitalRead(resetSwitch) == LOW){
+        resetFlag = true;
+        return;
+      }
+    }
+    int sweepDelay = random(200);
+    colorWipe(Color(random(255), random(255), 0), sweepDelay);
+    colorWipe(Color(0, random(255), random(255)), sweepDelay);
+    colorWipe(Color(random(255), 0, random(255)), sweepDelay);
+  }
+  for(int interval=50;interval>0;interval -= 10){
+    rainbow(interval);
+  }
+  while(1){
+    rainbowCycle(5);
+  }
+}
+
+void idleMode(void){
+  if(resetFlag == true){
+    return;
+  }
+  Serial.println("Entering idleMode");
+  while(1){
+    if(digitalRead(signalFromBase) == HIGH){
+      Serial.println("In idle mode. Base has gone high");
+      delay(10);
+      if(digitalRead(signalFromBase) == HIGH){
+        while(digitalRead(signalFromBase) == HIGH){
+        }
+        delay(20);
+        return;
+      }
+    }
+    fadeToTarget(random(20,255),random(20,255),random(20,255),250);
+    if(resetFlag == true){
+      return;
     }
   }
 }
@@ -187,6 +250,16 @@ void fadeToTarget(int rTarget, int gTarget, int bTarget, int interval){
     sprintf(statusMsg, "r -> rTarget: %d -> %d, g -> gTarget: %d -> %d, b -> bTarget: %d -> %d", r, rTarget, g, gTarget, b, bTarget);
     //Serial.println(statusMsg);
     strip.show();
+    if(digitalRead(signalFromBase) == HIGH){
+      return;
+    }
+    if(digitalRead(resetSwitch) == LOW){
+      delay(10);
+      if(digitalRead(resetSwitch) == LOW){
+        resetFlag = true;
+        return;
+      }
+    }
     delay(interval);
   }
 
@@ -243,10 +316,17 @@ void rainbowCycle(uint8_t wait) {
 // good for testing purposes
 void colorWipe(uint32_t c, uint8_t wait) {
   int i;
+  if(resetFlag == true){
+    return;
+  }
 
   for (i=0; i < strip.numPixels(); i++) {
     strip.setPixelColor(i, c);
     strip.show();
+    if(digitalRead(resetSwitch) == LOW){
+      resetFlag = true;
+      return;
+    }
     delay(wait);
   }
 }
@@ -281,6 +361,20 @@ uint32_t Wheel(byte WheelPos)
     return Color(0, WheelPos * 3, 255 - WheelPos * 3);
   }
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

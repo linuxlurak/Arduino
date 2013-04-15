@@ -27,17 +27,21 @@
 // Can be any valid output pins.
 // The colors of the wires may be totally different so
 // BE SURE TO CHECK YOUR PIXELS TO SEE WHICH WIRES TO USE!
+
 uint8_t dataPin  = 2;    // Yellow wire on Adafruit Pixels
 uint8_t clockPin = 3;    // Green wire on Adafruit Pixels
-
+int signalToDisc = 4;
 // Pin 5 = Panel voltmeter 1
 // Pin 6 = Panel voltmeter 2
+int resetSwitch = 8;
 int redPin = 9; // Output pins for connection to analog LED strip
 int greenPin = 10;
 int bluePin = 11;
-int signalToDisc = 4;
+int modeSwitch = 12;
 
 boolean standby = true;
+boolean resetFlag = false;
+
 // Don't forget to connect the ground wire to Arduino ground,
 // and the +5V wire to a +5V supply
 
@@ -57,25 +61,19 @@ void setup() {
   pinMode(greenPin, OUTPUT);
   pinMode(bluePin, OUTPUT);
   pinMode(7, INPUT);
-  pinMode(8, INPUT);
-  pinMode(12, INPUT);
+  pinMode(resetSwitch, INPUT);
+  pinMode(modeSwitch, INPUT);
   digitalWrite(7, HIGH);
-  digitalWrite(8, HIGH);
-  digitalWrite(12, HIGH);
-  startupTest();
+  digitalWrite(resetSwitch, HIGH);
+  digitalWrite(modeSwitch, HIGH);
 }
 
 
 void loop() {
   Serial.println("Top of Loop");
-  // Some example procedures showing how to display to the pixels
-  //drawX(4, 4, 100);
-  //bounce(4, 5, 50);
-  while(digitalRead(12)==HIGH){
-  }
-  while(digitalRead(12)==LOW){
-  }
-  delay(20);
+  digitalWrite(signalToDisc, LOW);
+  resetFlag = false;
+  idleMode();
   preActivation();
   breakdown();
   preActivation();
@@ -83,9 +81,43 @@ void loop() {
 
 }
 
+void preActivation(void){
+  if(resetFlag == true){
+    return;
+  }
+  Serial.println("Preactivation mode");
+  digitalWrite(signalToDisc, HIGH);
+  delay(40);
+  digitalWrite(signalToDisc, LOW);
+  while(1){
+    if(digitalRead(modeSwitch)==LOW){
+      delay(10);
+      if(digitalRead(modeSwitch)==LOW){
+        while(digitalRead(modeSwitch)==LOW){
+        }
+        return;
+      }
+    }
+    if(digitalRead(resetSwitch) == LOW){
+      delay(10);
+      if(digitalRead(resetSwitch) == LOW){
+        while(digitalRead(resetSwitch) == LOW){
+        }
+        resetFlag = true;
+        return;
+      }
+    }
+  }
+}
+
 void breakdown(void){
+  if(resetFlag == true){
+    return;
+  }
   Serial.println("Breakdown");
   digitalWrite(signalToDisc, HIGH);
+  delay(40);
+  digitalWrite(signalToDisc, LOW);
 
   analogWrite(5, 0);
   analogWrite(6, 0);
@@ -97,24 +129,33 @@ void breakdown(void){
   analogWrite(greenPin, 0);
   analogWrite(bluePin, 0);
   delay(500);
+
   while(1){
-    if(digitalRead(7)==LOW){
-      return;
-    }
-    if(digitalRead(8)==LOW){
-      return;
-    }
-    if(digitalRead(12)==LOW){
-      while(digitalRead(12)==LOW){
+    if(digitalRead(modeSwitch)==LOW){
+      delay(10);
+      if(digitalRead(modeSwitch)==LOW){
+        while(digitalRead(modeSwitch)==LOW){
+        }
+        return;
       }
-      return;
     }
-    delay(100);
+    if(digitalRead(resetSwitch) == LOW){
+      delay(10);
+      if(digitalRead(resetSwitch) == LOW){
+        while(digitalRead(resetSwitch) == LOW){
+        }
+        resetFlag = true;
+        return;
+      }
+    }
   }
 }
 
-void preActivation(){
-  Serial.println("Preactivation");
+void idleMode(){
+  if(resetFlag == true){
+    return;
+  }
+  Serial.println("idleMode");
   char message[90];
   int pin5 = 30;
   int pin5change = 1;
@@ -176,16 +217,28 @@ void preActivation(){
     if(digitalRead(8)==LOW){
       return;
     }
-    if(digitalRead(12)==LOW){
-      while(digitalRead(12)==LOW){
+    if(digitalRead(modeSwitch)==LOW){
+      while(digitalRead(modeSwitch)==LOW){
       }
       return;
+    }
+    if(digitalRead(resetSwitch) == LOW){
+      delay(10);
+      if(digitalRead(resetSwitch) == LOW){
+        while(digitalRead(resetSwitch) == LOW){
+        }
+        resetFlag = true;
+        return;
+      }
     }
     delay(250);
   }
 }
 
 void showtime(void){
+  if(resetFlag == true){
+    return;
+  }
   Serial.println("Showtime!!!!");
   randomAnalogPins();
   for(int count=random(20);count>=0;count--){
@@ -204,9 +257,21 @@ void showtime(void){
     rollLeft(random(255),random(255),random(255),random(250));
   }
   randomAnalogPins();
+  if(digitalRead(resetSwitch) == LOW){
+    delay(10);
+    if(digitalRead(resetSwitch) == LOW){
+      while(digitalRead(resetSwitch) == LOW){
+      }
+      resetFlag = true;
+      return;
+    }
+  }
 }
 
 void randomAnalogPins(void){
+  if(resetFlag == true){
+    return;
+  }
   analogWrite(5,random(40,255));
   analogWrite(6,random(40,255));
 }
@@ -238,36 +303,6 @@ void changeStriplight(void){
   //Serial.print(".");
 }
 
-void startupTest(void){
-  for(int i=0;i<strip.numPixels();i++){
-    strip.setPixelColor(i,Color(10,0,0));
-    strip.show();
-  }
-  for(int z=0;z<256;z++){
-    analogWrite(redPin, z);
-    delay(5);
-  }
-  for(int z=255;z>=0;z--){
-    analogWrite(redPin, z);
-    delay(5);
-  }
-  for(int z=0;z<256;z++){
-    analogWrite(greenPin, z);
-    delay(5);
-  }
-  for(int z=255;z>=0;z--){
-    analogWrite(greenPin, z);
-    delay(5);
-  }
-  for(int z=0;z<256;z++){
-    analogWrite(bluePin, z);
-    delay(5);
-  }
-  for(int z=255;z>=0;z--){
-    analogWrite(bluePin, z);
-    delay(5);
-  }
-}
 int convergeColorValue(int current, int target){
   if(current<target){
     current++;
@@ -288,6 +323,18 @@ int convergeColorValue(int current, int target){
 
 void rollRight(int r, int g, int b, long wait) {
   for (int x=0;x<4;x++) {
+    if(digitalRead(resetSwitch) == LOW){
+      delay(10);
+      if(digitalRead(resetSwitch) == LOW){
+        while(digitalRead(resetSwitch) == LOW){
+        }
+        resetFlag = true;
+        return;
+      }
+    }
+    if(resetFlag == true){
+      return;
+    }
     changeStriplight();
     for (int y=0;y<5;y++){
       strip.setPixelColor(x,y,r,g,b);
@@ -302,6 +349,18 @@ void rollRight(int r, int g, int b, long wait) {
 }
 void rollLeft(int r, int g, int b, long wait) {
   for (int x=3;x>=0;x--) {
+    if(digitalRead(resetSwitch) == LOW){
+      delay(10);
+      if(digitalRead(resetSwitch) == LOW){
+        while(digitalRead(resetSwitch) == LOW){
+        }
+        resetFlag = true;
+        return;
+      }
+    }
+    if(resetFlag == true){
+      return;
+    }
     changeStriplight();
     for (int y=0;y<5;y++){
       strip.setPixelColor(x,y,r,g,b);
@@ -316,6 +375,18 @@ void rollLeft(int r, int g, int b, long wait) {
 }
 void rollUp(int r, int g, int b, long wait) {
   for (int y=4;y>=0;y--) {
+    if(digitalRead(resetSwitch) == LOW){
+      delay(10);
+      if(digitalRead(resetSwitch) == LOW){
+        while(digitalRead(resetSwitch) == LOW){
+        }
+        resetFlag = true;
+        return;
+      }
+    }
+    if(resetFlag == true){
+      return;
+    }
     changeStriplight();
     for (int x=0;x<5;x++){
       strip.setPixelColor(x,y,r,g,b);
@@ -330,6 +401,18 @@ void rollUp(int r, int g, int b, long wait) {
 }
 void rollDown(int r, int g, int b, long wait) {
   for (int y=0;y<5;y++) {
+    if(digitalRead(resetSwitch) == LOW){
+      delay(10);
+      if(digitalRead(resetSwitch) == LOW){
+        while(digitalRead(resetSwitch) == LOW){
+        }
+        resetFlag = true;
+        return;
+      }
+    }
+    if(resetFlag == true){
+      return;
+    }
     changeStriplight();
     for (int x=0;x<5;x++){
       strip.setPixelColor(x,y,r,g,b);
@@ -468,6 +551,13 @@ int WheelBlue(byte WheelPos)
     return (255 - WheelPos * 3);
   }
 }
+
+
+
+
+
+
+
 
 
 
