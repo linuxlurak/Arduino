@@ -150,7 +150,7 @@ void breakdown(void){
   }
   Serial.println("Breakdown");
   digitalWrite(signalToDisc, HIGH);
-  delay(40);
+  delay(200);
   digitalWrite(signalToDisc, LOW);
 
   analogWrite(5, 0);
@@ -190,6 +190,9 @@ void idleMode(){
     return;
   }
   Serial.println("idleMode");
+  digitalWrite(signalToDisc, HIGH);
+  delay(200);
+  digitalWrite(signalToDisc, LOW);
   char message[90];
   int pin5 = 30;
   int pin5change = 1;
