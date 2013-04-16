@@ -41,6 +41,7 @@ int modeSwitch = 12;
 
 boolean standby = true;
 boolean resetFlag = false;
+boolean modeChangeFlag = false;
 
 // Don't forget to connect the ground wire to Arduino ground,
 // and the +5V wire to a +5V supply
@@ -87,8 +88,12 @@ void preActivation(void){
   }
   Serial.println("Preactivation mode");
   digitalWrite(signalToDisc, HIGH);
-  delay(40);
+  delay(200);
   digitalWrite(signalToDisc, LOW);
+
+  long wheelPos = 0;
+  int rainbowInterval = 40;
+
   while(1){
     if(digitalRead(modeSwitch)==LOW){
       delay(10);
@@ -104,6 +109,35 @@ void preActivation(void){
         while(digitalRead(resetSwitch) == LOW){
         }
         resetFlag = true;
+        return;
+      }
+    }
+    analogWrite(5,random(30,255));
+    analogWrite(6,random(30,255));
+
+    Serial.print("Starting rainbow. Interval = ");
+    Serial.print(rainbowInterval);
+    Serial.println("");
+    if(rainbowInterval == 40){
+      rainbow(40);
+      rainbowInterval = 20;
+    }
+    else if(rainbowInterval == 20){
+      rainbow(20);
+      rainbowInterval = 1;
+    }
+    else if(rainbowInterval == 1){
+      rainbow(1);
+      rainbowInterval = 0;
+    }
+    else{
+      Serial.println("Going to rainbow cycle");
+      rainbowCycle(0);
+      if(modeChangeFlag == true){
+        modeChangeFlag = false;
+        return;
+      }
+      if(resetFlag == true){
         return;
       }
     }
@@ -240,30 +274,38 @@ void showtime(void){
     return;
   }
   Serial.println("Showtime!!!!");
-  randomAnalogPins();
-  for(int count=random(20);count>=0;count--){
-    rollUp(random(255),random(255),random(255),random(250));
-  }
-  randomAnalogPins();
-  for(int count=random(20);count>=0;count--){
-    rollDown(random(255),random(255),random(255),random(250));
-  }
-  randomAnalogPins();
-  for(int count=random(20);count>=0;count--){
-    rollRight(random(255),random(255),random(255),random(250));
-  }
-  randomAnalogPins();
-  for(int count=random(20);count>=0;count--){
-    rollLeft(random(255),random(255),random(255),random(250));
-  }
-  randomAnalogPins();
-  if(digitalRead(resetSwitch) == LOW){
-    delay(10);
+  int interval = 250;
+  while(1){
+    randomAnalogPins();
+    for(int count=random(20);count>=0;count--){
+      rollUp(random(255),random(255),random(255),random(interval));
+    }
+    randomAnalogPins();
+    for(int count=random(20);count>=0;count--){
+      rollDown(random(255),random(255),random(255),random(interval));
+    }
+    randomAnalogPins();
+    for(int count=random(20);count>=0;count--){
+      rollRight(random(255),random(255),random(255),random(interval));
+    }
+    randomAnalogPins();
+    for(int count=random(20);count>=0;count--){
+      rollLeft(random(255),random(255),random(255),random(interval));
+    }
+    if(interval > 50){
+      interval -= 50;
+      Serial.print("Rolling interval: ");
+      Serial.println(interval);
+    }
+    randomAnalogPins();
     if(digitalRead(resetSwitch) == LOW){
-      while(digitalRead(resetSwitch) == LOW){
+      delay(10);
+      if(digitalRead(resetSwitch) == LOW){
+        while(digitalRead(resetSwitch) == LOW){
+        }
+        resetFlag = true;
+        return;
       }
-      resetFlag = true;
-      return;
     }
   }
 }
@@ -554,11 +596,69 @@ int WheelBlue(byte WheelPos)
 
 
 
+void rainbow(uint8_t wait) {
+  int i, j;
+
+  for (j=0; j < 256; j++) {     // 3 cycles of all 256 colors in the wheel
+    for (i=0; i < strip.numPixels(); i++) {
+      strip.setPixelColor(i, Wheel( (i + j) % 255));
+    }  
+    strip.show();   // write all the pixels out
+    if(digitalRead(resetSwitch) == LOW){
+      delay(10);
+      if(digitalRead(resetSwitch) == LOW){
+        while(digitalRead(resetSwitch) == LOW){
+        }
+        resetFlag = true;
+        return;
+      }
+    }
+    if(digitalRead(modeSwitch)==LOW){
+      return;
+    }
+    changeStriplight();
+    delay(wait);
+  }
+}
 
 
 
+void rainbowCycle(uint8_t wait) {
+  int i, j;
 
-
+  for (j=0; j < 256 * 5; j++) {     // 5 cycles of all 25 colors in the wheel
+    for (i=0; i < strip.numPixels(); i++) {
+      // tricky math! we use each pixel as a fraction of the full 96-color wheel
+      // (thats the i / strip.numPixels() part)
+      // Then add in j which makes the colors go around per pixel
+      // the % 96 is to make the wheel cycle around
+      strip.setPixelColor(i, Wheel( ((i * 256 / strip.numPixels()) + j) % 256) );
+    }
+    strip.show();   // write all the pixels out
+    changeStriplight();
+    if(digitalRead(modeSwitch)==LOW){
+      while(digitalRead(modeSwitch)==LOW){
+      }
+      Serial.println("mode change triggered in rainbowCycle");
+      modeChangeFlag=true;
+      return;
+    }
+    if(digitalRead(resetSwitch) == LOW){
+      delay(10);
+      if(digitalRead(resetSwitch) == LOW){
+        while(digitalRead(resetSwitch) == LOW){
+        }
+        Serial.println("reset triggered in rainbowCycle");
+        resetFlag = true;
+        return;
+      }
+    }
+    delay(wait);
+    //analogWrite(5, random(30,255));
+    //analogWrite(6, random(30,255));
+  }
+  Serial.println("End of one cycle of the rainbow");
+}
 
 
 

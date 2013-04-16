@@ -135,8 +135,11 @@ void preActivation(void){
         return;
       }
     }
-    fadeToTarget(random(20,255),random(20,255),random(20,255),25);
-
+    for(int i=0;i<strip.numPixels();i++){
+      strip.setPixelColor(i,Color(random(255),random(255),random(255)));
+      strip.show();
+      delay(8);
+    }
   }
 }
 
@@ -168,6 +171,7 @@ void startup(void){
     strip.setPixelColor(i,Color(0,255,0));
   }
   strip.show();
+  delay(5000);
 }
 
 void showtime(void){
@@ -192,9 +196,11 @@ void showtime(void){
     colorWipe(Color(0, random(255), random(255)), sweepDelay);
     colorWipe(Color(random(255), 0, random(255)), sweepDelay);
   }
+  Serial.println("Going to rainbow");
   for(int interval=50;interval>0;interval -= 10){
     rainbow(interval);
   }
+  Serial.println("Going to rainbow cycle");
   while(1){
     rainbowCycle(5);
   }
