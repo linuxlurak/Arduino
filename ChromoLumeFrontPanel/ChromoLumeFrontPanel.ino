@@ -95,6 +95,9 @@ void preActivation(void){
   int rainbowInterval = 40;
 
   while(1){
+    if(resetFlag == true){
+      return;
+    }
     if(digitalRead(modeSwitch)==LOW){
       delay(10);
       if(digitalRead(modeSwitch)==LOW){
@@ -273,12 +276,18 @@ void idleMode(){
 }
 
 void showtime(void){
+  //Serial.println("Top of SHOWTIME function");
   if(resetFlag == true){
+    //Serial.println("resetFlag is true");
     return;
   }
   Serial.println("Showtime!!!!");
   int interval = 250;
   while(1){
+    //Serial.println("Top of SHOWTIME loop");
+    if(resetFlag==true){
+      return;
+    }
     randomAnalogPins();
     for(int count=random(20);count>=0;count--){
       rollUp(random(255),random(255),random(255),random(interval));
@@ -307,6 +316,7 @@ void showtime(void){
         while(digitalRead(resetSwitch) == LOW){
         }
         resetFlag = true;
+        Serial.println(resetFlag);
         return;
       }
     }
