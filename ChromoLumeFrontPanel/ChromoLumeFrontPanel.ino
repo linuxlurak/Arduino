@@ -283,31 +283,35 @@ void showtime(void){
   }
   Serial.println("Showtime!!!!");
   int interval = 250;
+  int maxCount = 20;
   while(1){
     //Serial.println("Top of SHOWTIME loop");
     if(resetFlag==true){
       return;
     }
     randomAnalogPins();
-    for(int count=random(20);count>=0;count--){
+    for(int count=random(maxCount);count>=0;count--){
       rollUp(random(255),random(255),random(255),random(interval));
     }
     randomAnalogPins();
-    for(int count=random(20);count>=0;count--){
+    for(int count=random(maxCount);count>=0;count--){
       rollDown(random(255),random(255),random(255),random(interval));
     }
     randomAnalogPins();
-    for(int count=random(20);count>=0;count--){
+    for(int count=random(maxCount);count>=0;count--){
       rollRight(random(255),random(255),random(255),random(interval));
     }
     randomAnalogPins();
-    for(int count=random(20);count>=0;count--){
+    for(int count=random(maxCount);count>=0;count--){
       rollLeft(random(255),random(255),random(255),random(interval));
     }
     if(interval > 50){
       interval -= 50;
       Serial.print("Rolling interval: ");
       Serial.println(interval);
+      maxCount--;
+      Serial.print("maxCount: ");
+      Serial.println(maxCount);
     }
     randomAnalogPins();
     if(digitalRead(resetSwitch) == LOW){

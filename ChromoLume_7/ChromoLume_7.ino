@@ -136,7 +136,7 @@ void preActivation(void){
       }
     }
     for(int i=0;i<strip.numPixels();i++){
-      strip.setPixelColor(i,Color(random(255),random(255),random(255)));
+      strip.setPixelColor(random(strip.numPixels()),Color(random(255),random(255),random(255)));
       strip.show();
       delay(8);
     }
@@ -150,6 +150,7 @@ void startup(void){
     strip.setPixelColor(i,Color(255,0,0));
   }
   strip.show();
+  delay(2000);
   Serial.println("In startup, waiting for base to go low");
   while(digitalRead(signalFromBase)==HIGH){
     //Wait for base
@@ -181,9 +182,8 @@ void showtime(void){
   Serial.println("SHOWTIME!!!");
   long showStart = millis();
   while(1){
-    if((millis() - showStart) > 20000){
-      break;
-    }
+    Serial.print("Elapsed millis since SHOWTIME: ");
+    Serial.println(millis() - showStart);
     if(digitalRead(resetSwitch) == LOW){
       delay(10);
       if(digitalRead(resetSwitch) == LOW){
@@ -191,18 +191,26 @@ void showtime(void){
         return;
       }
     }
-    int sweepDelay = random(200);
-    colorWipe(Color(random(255), random(255), 0), sweepDelay);
-    colorWipe(Color(0, random(255), random(255)), sweepDelay);
-    colorWipe(Color(random(255), 0, random(255)), sweepDelay);
-  }
-  Serial.println("Going to rainbow");
-  for(int interval=50;interval>0;interval -= 10){
-    rainbow(interval);
-  }
-  Serial.println("Going to rainbow cycle");
-  while(1){
-    rainbowCycle(5);
+    if((millis() - showStart) < 18000){
+      int sweepDelay = random(200);
+      Serial.print("Color sweep (200): ");
+      Serial.println(sweepDelay);
+      colorWipe(Color(random(255), random(255), 0), sweepDelay);
+      colorWipe(Color(0, random(255), random(255)), sweepDelay);
+      colorWipe(Color(random(255), 0, random(255)), sweepDelay);
+    }
+    else if((millis() - showStart) < 32000){
+      Serial.println("Going to rainbow cycle");
+      rainbowCycle(5);
+    }
+    else{
+      int sweepDelay = random(50);
+      Serial.print("Color sweep (50): ");
+      Serial.println(sweepDelay);
+      colorWipe(Color(random(255), random(255), 0), sweepDelay);
+      colorWipe(Color(0, random(255), random(255)), sweepDelay);
+      colorWipe(Color(random(255), 0, random(255)), sweepDelay);
+    }
   }
 }
 
@@ -222,7 +230,9 @@ void idleMode(void){
         return;
       }
     }
-    fadeToTarget(random(20,255),random(20,255),random(20,255),250);
+    fadeToTarget(random(0,35),random(20,255),random(20,255),250);
+    fadeToTarget(random(20,255),random(0,35),random(20,255),250);
+    fadeToTarget(random(20,255),random(20,255),random(0,35),250);
     if(resetFlag == true){
       return;
     }
@@ -367,6 +377,7 @@ uint32_t Wheel(byte WheelPos)
     return Color(0, WheelPos * 3, 255 - WheelPos * 3);
   }
 }
+
 
 
 
