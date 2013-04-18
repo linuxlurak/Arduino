@@ -88,7 +88,7 @@ void preActivation(void){
   }
   Serial.println("Preactivation mode");
   digitalWrite(signalToDisc, HIGH);
-  delay(200);
+  delay(350);
   digitalWrite(signalToDisc, LOW);
 
   long wheelPos = 0;
@@ -153,7 +153,7 @@ void breakdown(void){
   }
   Serial.println("Breakdown");
   digitalWrite(signalToDisc, HIGH);
-  delay(200);
+  delay(350);
   digitalWrite(signalToDisc, LOW);
 
   analogWrite(5, 0);
@@ -282,6 +282,9 @@ void showtime(void){
     return;
   }
   Serial.println("Showtime!!!!");
+  digitalWrite(signalToDisc, HIGH);
+  delay(350);
+  digitalWrite(signalToDisc, LOW);
   int interval = 250;
   int maxCount = 20;
   while(1){
