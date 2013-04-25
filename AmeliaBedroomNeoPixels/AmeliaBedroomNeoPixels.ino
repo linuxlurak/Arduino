@@ -1,5 +1,6 @@
 #include <Adafruit_NeoPixel.h>
 #include <Sleep.h>
+//#include <PinChangeInt.h>
 
 // Parameter 1 = number of pixels in strip
 // Parameter 2 = pin number (most are valid)
@@ -12,10 +13,17 @@ Adafruit_NeoPixel strip = Adafruit_NeoPixel(60, 6, NEO_GRB + NEO_KHZ800);
 
 // DEFINES
 #define REDDISH 0
-#define BLUEISH 1
-#define GREENISH 2
+#define GREENISH 1
+#define BLUEISH 2
 #define RAINBOW 3
 #define THIRTYMINUTES 30 * 60 * 1000
+#define REDBUTTON 0
+#define GREENBUTTON 1
+#define BLUEBUTTON 2
+#define YELLOWBUTTON 3
+#define GRAYTOPBUTTON 4
+#define GRAYBOTTOMBUTTON 5
+
 
 // GLOBALS
 volatile byte intensity = 255;
@@ -25,41 +33,81 @@ volatile unsigned long thirtyMinuteStart = 0;
 unsigned int pixdelay;
 
 void setup() {
+  delay(5000);
+  Serial.println("Starting up");
+  delay(5000);
   strip.begin();
   strip.show(); // Initialize all pixels to 'off'
   Serial.begin(9600);
+  pinMode(REDBUTTON, INPUT);
+  digitalWrite(REDBUTTON, HIGH);
+  attachInterrupt(0, redButtonISR, FALLING);
+//  PCintPort::attachInterrupt(REDBUTTON, &redButtonISR, FALLING);
+  pinMode(GREENBUTTON, INPUT);
+  digitalWrite(GREENBUTTON, HIGH);
+    attachInterrupt(1, greenButtonISR, FALLING);
+//  PCintPort::attachInterrupt(GREENBUTTON, &greenButtonISR, FALLING);
+  pinMode(BLUEBUTTON, INPUT);
+  digitalWrite(BLUEBUTTON, HIGH);
+    attachInterrupt(2, blueButtonISR, FALLING);
+//  PCintPort::attachInterrupt(BLUEBUTTON, &blueButtonISR, FALLING);
+  pinMode(YELLOWBUTTON, INPUT);
+  digitalWrite(YELLOWBUTTON, HIGH);
+    attachInterrupt(3, yellowButtonISR, FALLING);
+//  PCintPort::attachInterrupt(YELLOWBUTTON, &yellowButtonISR, FALLING);
+  pinMode(GRAYTOPBUTTON, INPUT);
+  digitalWrite(GRAYTOPBUTTON, HIGH);
+//  PCintPort::attachInterrupt(GRAYTOPBUTTON, &grayTopButtonISR, FALLING);
+  pinMode(GRAYBOTTOMBUTTON, INPUT);
+  digitalWrite(GRAYBOTTOMBUTTON, HIGH);
+//  PCintPort::attachInterrupt(GRAYBOTTOMBUTTON, &grayBottomButtonISR, FALLING);
 }
 
 void loop() {
+  Serial.println("");
+  Serial.println("Top of loop");
   if(thirtyMinuteStart == 0 || (millis() - thirtyMinuteStart) > THIRTYMINUTES){
     intensity--;
   }
   if(intensity > 0){
-    pixdelay = int(intensity * (2.0/3.0) + 200);
+    pixdelay = int(intensity * (-2.0/3.0) + 200);
     printUptime();
     doModeAction();
   }
-  printUptime();
-  shuttingDown();
-  Serial.println("Good night! :-)");
-  while(1){
-    delay(10000);
+  else{
+    printUptime();
+    shuttingDown();
+    Serial.println("Good night! :-)");
+    while(1){
+      delay(10000);
+    }
   }
 }
 
 void doModeAction(void){
   if(mode == REDDISH){
+    Serial.println("REDDISH colorWipe");
     colorWipe(strip.Color(intensity, random(0,int(intensity/10)),random(0,int(intensity/10))), pixdelay); // Red
-  }else if(mode == GREENISH){
+  }
+  else if(mode == GREENISH){
+    Serial.println("GREENISH colorWipe");
     colorWipe(strip.Color(random(0,int(intensity/10)), intensity, random(0,int(intensity/10))), pixdelay); // Green
-  }else if(mode == BLUEISH){
+  }
+  else if(mode == BLUEISH){
+    Serial.println("BLUEISH colorWipe");
     colorWipe(strip.Color(random(0,int(intensity/10)),random(0,int(intensity/10)),intensity), pixdelay); // Blue
-  }else if(mode == RAINBOW){
+  }
+  else if(mode == RAINBOW){
     if(rainbowSubmode == 0){
+      Serial.println("randomize pixels");
       randomizePixels(intensity, pixdelay);
-    }else if(rainbowSubmode == 1){
+    }
+    else if(rainbowSubmode == 1){
+      Serial.println("rainbow");
       rainbow(pixdelay);
-    }else if(rainbowSubmode == 2){
+    }
+    else if(rainbowSubmode == 2){
+      Serial.println("rainbow cycle");
       rainbowCycle(pixdelay);
     }
   }
@@ -70,9 +118,11 @@ void randomizePixels(byte maxintensity, unsigned long wait){
     strip.setPixelColor(pixel, strip.Color(random(0,maxintensity),random(0,maxintensity),random(0,maxintensity)));
     strip.show();
     delay(wait);
-  }}
+  }
+}
 
 void shuttingDown(void){
+  Serial.println("Beginning shutdown display");
   randomizePixels(4,4000);
   printUptime();
   for(int pixel=0;pixel<strip.numPixels();pixel++){
@@ -90,21 +140,26 @@ void shuttingDown(void){
 }
 
 void printUptime(void){
-  if(intensity % 25 == 0){
-    Serial.print("Intensity: ");
-    Serial.print(intensity);
-    Serial.print("   Pixdelay:");
-    Serial.print(pixdelay);
-    Serial.print("   ");
-    Serial.print(millis()/60000);
-    Serial.println(" Minutes");
-  }
+  //  if(intensity % 25 == 0){
+  Serial.println("");
+  Serial.print("Intensity: ");
+  Serial.print(intensity);
+  Serial.print("   Pixdelay:");
+  Serial.print(pixdelay);
+  Serial.print("   ");
+  Serial.print(millis()/60000);
+  Serial.print(" Minutes    Mode:");
+  Serial.print(mode);
+  Serial.print(" Rainbow submode: ");
+  Serial.println(rainbowSubmode);
+  //  }
 }
 // Fill the dots one after the other with a color
 void colorWipe(uint32_t c, uint8_t wait) {
   for(uint16_t i=0; i<strip.numPixels(); i++) {
     strip.setPixelColor(i, c);
     strip.show();
+    Serial.print(".");
     delay(wait);
   }
 }
@@ -164,11 +219,11 @@ void blueButtonISR(void){
 
 void yellowButtonISR(void){
   if(mode == RAINBOW){
-    Serial.print("Rainbow submode was: ");
-    Serial.print(rainbowSubmode);
-    rainbowSubmode = rainbowSubmode++ % 3;
-    Serial.print(" Rainbow submode now is: ");
-    Serial.println(rainbowSubmode);
+    //Serial.print("Rainbow submode was: ");
+    //Serial.print(rainbowSubmode);
+    rainbowSubmode = (rainbowSubmode + 1) % 3;
+    //Serial.print(" Rainbow submode now is: ");
+    //Serial.println(rainbowSubmode);
   }
   else{
     mode = RAINBOW;
@@ -196,6 +251,7 @@ void grayBottomButtonISR(void){
     intensity = 0;
   }
 }
+
 
 
 
