@@ -1,6 +1,5 @@
 #include <Adafruit_NeoPixel.h>
 #include <Sleep.h>
-//#include <PinChangeInt.h>
 
 // Parameter 1 = number of pixels in strip
 // Parameter 2 = pin number (most are valid)
@@ -16,14 +15,15 @@ Adafruit_NeoPixel strip = Adafruit_NeoPixel(60, 6, NEO_GRB + NEO_KHZ800);
 #define GREENISH 1
 #define BLUEISH 2
 #define RAINBOW 3
-#define THIRTYMINUTES 30 * 60 * 1000
+#define THIRTYMINUTES 1800000
 #define REDBUTTON 0
 #define GREENBUTTON 1
 #define BLUEBUTTON 2
 #define YELLOWBUTTON 3
 #define GRAYTOPBUTTON 4
 #define GRAYBOTTOMBUTTON 5
-
+#define DEBOUNCE 10  // button debouncer, how many ms to debounce, 5+ ms is usually plenty
+#define RETRIGGERDELAY 500 // ms delay between between repeating the same action on button held down or consecutive presses
 
 // GLOBALS
 volatile byte intensity = 255;
@@ -32,40 +32,46 @@ volatile byte rainbowSubmode = 0;
 volatile unsigned long thirtyMinuteStart = 0;
 unsigned int pixdelay;
 
+// here is where we define the buttons that we'll use. button "1" is the first, button "6" is the 6th, etc
+byte buttons[] = {
+  0, 1, 2, 3, 4, 5}; // the analog 0-5 pins are also known as 14-19
+// This handy macro lets us determine how big the array up above is, by checking the size
+#define NUMBUTTONS sizeof(buttons)
+// we will track if a button is just pressed, just released, or 'currently pressed' 
+byte pressed[NUMBUTTONS], justpressed[NUMBUTTONS], justreleased[NUMBUTTONS];
+long needsAttention[NUMBUTTONS]; // Records the value of millis() any time that we check buttons and find that a button was currently pressed
+// needsAttention[] will record a non-zero value if the button has been pressed even if it isn't anymore
+// Any code that takes action on a button press should reset the corresponding element of needsAttention[] to zero after taking
+// the appropriate action that the button is supposed to cause
+
 void setup() {
-  delay(5000);
+//  delay(5000);
   Serial.println("Starting up");
-  delay(5000);
+//  delay(5000);
   strip.begin();
   strip.show(); // Initialize all pixels to 'off'
   Serial.begin(9600);
-  pinMode(REDBUTTON, INPUT);
-  digitalWrite(REDBUTTON, HIGH);
-  attachInterrupt(0, redButtonISR, FALLING);
-//  PCintPort::attachInterrupt(REDBUTTON, &redButtonISR, FALLING);
-  pinMode(GREENBUTTON, INPUT);
-  digitalWrite(GREENBUTTON, HIGH);
-    attachInterrupt(1, greenButtonISR, FALLING);
-//  PCintPort::attachInterrupt(GREENBUTTON, &greenButtonISR, FALLING);
-  pinMode(BLUEBUTTON, INPUT);
-  digitalWrite(BLUEBUTTON, HIGH);
-    attachInterrupt(2, blueButtonISR, FALLING);
-//  PCintPort::attachInterrupt(BLUEBUTTON, &blueButtonISR, FALLING);
-  pinMode(YELLOWBUTTON, INPUT);
-  digitalWrite(YELLOWBUTTON, HIGH);
-    attachInterrupt(3, yellowButtonISR, FALLING);
-//  PCintPort::attachInterrupt(YELLOWBUTTON, &yellowButtonISR, FALLING);
-  pinMode(GRAYTOPBUTTON, INPUT);
-  digitalWrite(GRAYTOPBUTTON, HIGH);
-//  PCintPort::attachInterrupt(GRAYTOPBUTTON, &grayTopButtonISR, FALLING);
-  pinMode(GRAYBOTTOMBUTTON, INPUT);
-  digitalWrite(GRAYBOTTOMBUTTON, HIGH);
-//  PCintPort::attachInterrupt(GRAYBOTTOMBUTTON, &grayBottomButtonISR, FALLING);
+  // Make input & enable pull-up resistors on switch pins
+  for (byte i=0; i< NUMBUTTONS; i++) {
+    pinMode(buttons[i], INPUT);
+    digitalWrite(buttons[i], HIGH);
+    needsAttention[i] = 0;
+  }
+
+  mode = REDDISH;
 }
 
 void loop() {
   Serial.println("");
   Serial.println("Top of loop");
+  if(intensity == 0){
+    printUptime();
+    shuttingDown();
+    Serial.println("Good night! :-)");
+    while(intensity == 0){
+      idelay(1000);
+    }
+  }
   if(thirtyMinuteStart == 0 || (millis() - thirtyMinuteStart) > THIRTYMINUTES){
     intensity--;
   }
@@ -73,14 +79,6 @@ void loop() {
     pixdelay = int(intensity * (-2.0/3.0) + 200);
     printUptime();
     doModeAction();
-  }
-  else{
-    printUptime();
-    shuttingDown();
-    Serial.println("Good night! :-)");
-    while(1){
-      delay(10000);
-    }
   }
 }
 
@@ -99,15 +97,15 @@ void doModeAction(void){
   }
   else if(mode == RAINBOW){
     if(rainbowSubmode == 0){
-      Serial.println("randomize pixels");
+      Serial.println("Randomize Pixels");
       randomizePixels(intensity, pixdelay);
     }
     else if(rainbowSubmode == 1){
-      Serial.println("rainbow");
+      Serial.println("Rainbow");
       rainbow(pixdelay);
     }
     else if(rainbowSubmode == 2){
-      Serial.println("rainbow cycle");
+      Serial.println("Rainbow Cycle");
       rainbowCycle(pixdelay);
     }
   }
@@ -117,7 +115,10 @@ void randomizePixels(byte maxintensity, unsigned long wait){
   for(int pixel=0;pixel<strip.numPixels();pixel++){
     strip.setPixelColor(pixel, strip.Color(random(0,maxintensity),random(0,maxintensity),random(0,maxintensity)));
     strip.show();
-    delay(wait);
+    Serial.print(".");
+    if(idelay(wait)){
+      return;
+    }
   }
 }
 
@@ -125,16 +126,26 @@ void shuttingDown(void){
   Serial.println("Beginning shutdown display");
   randomizePixels(4,4000);
   printUptime();
+  if(intensity > 0){
+    return;
+  }
   for(int pixel=0;pixel<strip.numPixels();pixel++){
     strip.setPixelColor(pixel, strip.Color(1,0,0));
     strip.show();
-    delay(4000);
+    if(idelay(4000)){
+      return;
+    }
+  }
+  if(intensity > 0){
+    return;
   }
   printUptime();
   for(int pixel=0;pixel<strip.numPixels();pixel++){
     strip.setPixelColor(pixel, strip.Color(0,0,0));
     strip.show();
-    delay(4000);
+    if(idelay(4000)){
+      return;
+    }
   }
   printUptime();
 }
@@ -144,7 +155,17 @@ void printUptime(void){
   Serial.println("");
   Serial.print("Intensity: ");
   Serial.print(intensity);
-  Serial.print("   Pixdelay:");
+  Serial.print("   Extratime: ");
+  if(thirtyMinuteStart == 0){
+    Serial.print("0");
+  }
+  else if((millis() - thirtyMinuteStart) < THIRTYMINUTES){
+    Serial.print((THIRTYMINUTES - (millis() - thirtyMinuteStart))/1000);
+  }
+  else{
+    Serial.print("0");
+  }
+  Serial.print(" seconds   Pixdelay:");
   Serial.print(pixdelay);
   Serial.print("   ");
   Serial.print(millis()/60000);
@@ -160,7 +181,9 @@ void colorWipe(uint32_t c, uint8_t wait) {
     strip.setPixelColor(i, c);
     strip.show();
     Serial.print(".");
-    delay(wait);
+    if(idelay(wait)){
+      return;
+    }
   }
 }
 
@@ -172,7 +195,10 @@ void rainbow(uint8_t wait) {
       strip.setPixelColor(i, Wheel((i+j) & 255));
     }
     strip.show();
-    delay(wait);
+    Serial.print(".");
+    if(idelay(wait)){
+      return;
+    }
   }
 }
 
@@ -185,7 +211,10 @@ void rainbowCycle(uint8_t wait) {
       strip.setPixelColor(i, Wheel(((i * 256 / strip.numPixels()) + j) & 255));
     }
     strip.show();
-    delay(wait);
+    Serial.print(".");
+    if(idelay(wait)){
+      return;
+    }
   }
 }
 
@@ -218,6 +247,12 @@ void blueButtonISR(void){
 }
 
 void yellowButtonISR(void){
+  static long triggered = 0;
+  if(millis() - triggered < RETRIGGERDELAY){
+    // Don't retrigger too quickly. We want humanly distinct button presses
+    return;
+  }
+  triggered = millis();
   if(mode == RAINBOW){
     //Serial.print("Rainbow submode was: ");
     //Serial.print(rainbowSubmode);
@@ -231,6 +266,12 @@ void yellowButtonISR(void){
 }
 
 void grayTopButtonISR(void){
+  static long triggered = 0;
+  if(millis() - triggered < RETRIGGERDELAY){
+    // Don't retrigger too quickly. We want humanly distinct button presses
+    return;
+  }
+  triggered = millis();
   if(intensity == 0){
     intensity = 255;
   }
@@ -244,6 +285,13 @@ void grayTopButtonISR(void){
 }
 
 void grayBottomButtonISR(void){
+  static long triggered = 0;
+  if(millis() - triggered < RETRIGGERDELAY){
+    // Don't retrigger too quickly. We want humanly distinct button presses
+    return;
+  }
+  triggered = millis();
+  thirtyMinuteStart = 0;
   if(intensity > 9){
     intensity -= 10;
   }
@@ -252,7 +300,105 @@ void grayBottomButtonISR(void){
   }
 }
 
+void check_buttons()
+{
+  static byte previousstate[NUMBUTTONS];
+  static byte currentstate[NUMBUTTONS];
+  static long lasttime;
+  byte index;
 
+  if (millis() < lasttime) {
+    // we wrapped around, lets just try again
+    lasttime = millis();
+  }
+
+  if ((lasttime + DEBOUNCE) > millis()) {
+    // not enough time has passed to debounce
+    return; 
+  }
+  // ok we have waited DEBOUNCE milliseconds, lets reset the timer
+  lasttime = millis();
+
+  for (index = 0; index < NUMBUTTONS; index++) {
+    justpressed[index] = 0;       // when we start, we clear out the "just" indicators
+    justreleased[index] = 0;
+
+    currentstate[index] = digitalRead(buttons[index]);   // read the button
+
+    /*     
+     Serial.print(index, DEC);
+     Serial.print(": cstate=");
+     Serial.print(currentstate[index], DEC);
+     Serial.print(", pstate=");
+     Serial.print(previousstate[index], DEC);
+     Serial.print(", press=");
+     */
+
+    if (currentstate[index] == previousstate[index]) {
+      if ((pressed[index] == LOW) && (currentstate[index] == LOW)) {
+        // just pressed
+        justpressed[index] = 1;
+      }
+      else if ((pressed[index] == HIGH) && (currentstate[index] == HIGH)) {
+        // just released
+        justreleased[index] = 1;
+      }
+      pressed[index] = !currentstate[index];  // remember, digital HIGH means NOT pressed
+      if(pressed[index] == HIGH){
+        needsAttention[index] = lasttime; //record the last time the button was pressed
+      }
+    }
+    //Serial.println(pressed[index], DEC);
+    previousstate[index] = currentstate[index];   // keep a running tally of the buttons
+  }
+}
+
+int idelay(long targetDelay){
+  // A drop in replacement for delay(). This one keeps checking switches rather than doing nothing.
+  long delayStart = millis();
+  int handleResponse = 0;
+  while(millis() - delayStart < targetDelay){
+    check_buttons();
+    handleResponse += handle_buttons();
+  }
+  return handleResponse;
+}
+
+int handle_buttons(void){
+  // iterate over the buttons arrays and take any necessary actions on buttons that are/were pressed
+  int buttonsHandled = 0;
+  if(needsAttention[REDBUTTON]){
+    redButtonISR();
+    needsAttention[REDBUTTON] = 0;
+    buttonsHandled++;
+  }
+  if(needsAttention[GREENBUTTON]){
+    greenButtonISR();
+    needsAttention[GREENBUTTON] = 0;
+    buttonsHandled++;
+  }
+  if(needsAttention[BLUEBUTTON]){
+    blueButtonISR();
+    needsAttention[BLUEBUTTON] = 0;
+    buttonsHandled++;
+  }
+  if(needsAttention[YELLOWBUTTON]){
+    yellowButtonISR();
+    needsAttention[YELLOWBUTTON] = 0;
+    buttonsHandled++;
+  }
+  if(needsAttention[GRAYTOPBUTTON]){
+    grayTopButtonISR();
+    needsAttention[GRAYTOPBUTTON] = 0;
+    buttonsHandled++;
+  }
+  if(needsAttention[GRAYBOTTOMBUTTON]){
+    grayBottomButtonISR();
+    needsAttention[GRAYBOTTOMBUTTON] = 0;
+    buttonsHandled++;
+  }
+  return buttonsHandled;
+}
 
 
 
