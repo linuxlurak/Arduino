@@ -31,6 +31,7 @@ volatile byte mode = REDDISH;
 volatile byte rainbowSubmode = 0;
 volatile unsigned long thirtyMinuteStart = 0;
 unsigned int pixdelay;
+long lastDecrementTime = 0;
 
 // here is where we define the buttons that we'll use. button "1" is the first, button "6" is the 6th, etc
 byte buttons[] = {
@@ -45,9 +46,9 @@ long needsAttention[NUMBUTTONS]; // Records the value of millis() any time that 
 // the appropriate action that the button is supposed to cause
 
 void setup() {
-//  delay(5000);
+  //  delay(5000);
   Serial.println("Starting up");
-//  delay(5000);
+  //  delay(5000);
   strip.begin();
   strip.show(); // Initialize all pixels to 'off'
   Serial.begin(9600);
@@ -62,7 +63,7 @@ void setup() {
 }
 
 void loop() {
-  Serial.println("");
+  //  Serial.println("");
   Serial.println("Top of loop");
   if(intensity == 0){
     printUptime();
@@ -73,7 +74,10 @@ void loop() {
     }
   }
   if(thirtyMinuteStart == 0 || (millis() - thirtyMinuteStart) > THIRTYMINUTES){
-    intensity--;
+    if((millis() - lastDecrementTime) > RETRIGGERDELAY){
+      intensity--;
+      lastDecrementTime = millis();
+    }
   }
   if(intensity > 0){
     pixdelay = int(intensity * (-2.0/3.0) + 200);
@@ -151,6 +155,7 @@ void shuttingDown(void){
 }
 
 void printUptime(void){
+  //  return;
   //  if(intensity % 25 == 0){
   Serial.println("");
   Serial.print("Intensity: ");
@@ -359,7 +364,10 @@ int idelay(long targetDelay){
   int handleResponse = 0;
   while(millis() - delayStart < targetDelay){
     check_buttons();
-    handleResponse += handle_buttons();
+    handleResponse = handle_buttons();
+    if(handleResponse){
+      break;
+    }
   }
   return handleResponse;
 }
@@ -399,6 +407,8 @@ int handle_buttons(void){
   }
   return buttonsHandled;
 }
+
+
 
 
 
