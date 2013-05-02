@@ -1,0 +1,3 @@
+[submodule "libraries/SPI_VFD"]
+	path = libraries/SPI_VFD
+	url = https://github.com/adafruit/SPI_VFD.git
