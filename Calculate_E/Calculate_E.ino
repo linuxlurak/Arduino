@@ -15,7 +15,6 @@ void setup ()
 
   int i = 1;
   BigNumber E;  // previous result
-  char message[90];
 
   unsigned long start = millis ();
   do
@@ -24,8 +23,10 @@ void setup ()
     E = e;
     n *= i++;  // n is i factorial
     e += one / n;
-    sprintf(message, "iteration: %d\te = %f", i, e);
-    Serial.println(message);
+    Serial.print("iteration");
+    Serial.print(i);
+    Serial.print("  e = ");
+    Serial.println(e);
     delay(100);
   }  while (e != E);
   unsigned long time = millis () - start;
