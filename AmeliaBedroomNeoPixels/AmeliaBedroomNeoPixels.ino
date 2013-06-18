@@ -201,7 +201,7 @@ void rainbow(uint8_t wait) {
     }
     strip.show();
     Serial.print(".");
-    if(idelay(wait)){
+    if(idelay(wait * (strip.numPixels()/256.0))){ //Compensate for 256 delays vs numPixels delays in the wipes
       return;
     }
   }
@@ -217,7 +217,7 @@ void rainbowCycle(uint8_t wait) {
     }
     strip.show();
     Serial.print(".");
-    if(idelay(wait)){
+    if(idelay(wait * (strip.numPixels() / ( 256.0 * 5.0)))){ // Compensate for 256*5 delays vs numPixels delays in the wipes
       return;
     }
   }
