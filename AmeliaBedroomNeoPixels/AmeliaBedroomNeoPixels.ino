@@ -136,7 +136,7 @@ void shuttingDown(void){
   for(int pixel=0;pixel<strip.numPixels();pixel++){
     strip.setPixelColor(pixel, strip.Color(1,0,0));
     strip.show();
-    if(idelay(4000)){
+    if(idelay(4000) && intensity > 0){
       return;
     }
   }
@@ -147,7 +147,7 @@ void shuttingDown(void){
   for(int pixel=0;pixel<strip.numPixels();pixel++){
     strip.setPixelColor(pixel, strip.Color(0,0,0));
     strip.show();
-    if(idelay(4000)){
+    if(idelay(4000) && intensity > 0){
       return;
     }
   }
