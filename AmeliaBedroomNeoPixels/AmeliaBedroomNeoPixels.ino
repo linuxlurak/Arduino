@@ -194,6 +194,7 @@ void colorWipe(uint32_t c, uint8_t wait) {
 
 void rainbow(uint8_t wait) {
   uint16_t i, j;
+  long rainbowStartTime = millis();
 
   for(j=0; j<256; j++) {
     for(i=0; i<strip.numPixels(); i++) {
@@ -201,15 +202,29 @@ void rainbow(uint8_t wait) {
     }
     strip.show();
     Serial.print(".");
-    if(idelay(wait * (strip.numPixels()/256.0))){ //Compensate for 256 delays vs numPixels delays in the wipes
+    if(idelay(wait)){
       return;
     }
   }
+  //enforce an intensity decrease of 1/7 units per second spent
+  //in a call to rainbow. This is because a single call to rainbow()
+  //takes much longer than a single call to colorWipe
+  long decrement = int((1.0/7.0) * (millis() - rainbowStartTime)/1000);
+  if(intensity > decrement){
+    intensity -= decrement;
+  }
+  else{
+    intensity = 0;
+  }
+  //The 1/7 units per second number is derived based on bringing intensity
+  //from 255 to zero in less than 30 minutes. 1800 seconds / 7 = 257
+  //which just a little more than the max value of the intensity int.
 }
 
 // Slightly different, this makes the rainbow equally distributed throughout
 void rainbowCycle(uint8_t wait) {
   uint16_t i, j;
+  long rainbowStartTime = millis();
 
   for(j=0; j<256*5; j++) { // 5 cycles of all colors on wheel
     for(i=0; i< strip.numPixels(); i++) {
@@ -217,10 +232,23 @@ void rainbowCycle(uint8_t wait) {
     }
     strip.show();
     Serial.print(".");
-    if(idelay(wait * (strip.numPixels() / ( 256.0 * 5.0)))){ // Compensate for 256*5 delays vs numPixels delays in the wipes
+    if(idelay(wait)){
       return;
     }
   }
+  //enforce an intensity decrease of 7 units per second spent
+  //in a call to rainbowCycle. This is because a single call to rainbowCycle()
+  //takes much longer than a single call to colorWipe
+  long decrement = int((1.0/7.0) * (millis() - rainbowStartTime)/1000);
+  if(intensity > decrement){
+    intensity -= decrement;
+  }
+  else{
+    intensity = 0;
+  }
+  //The 1/7 units per second number is derived based on bringing intensity
+  //from 255 to zero in less than 30 minutes. 1800 seconds / 7 = 257
+  //which just a little more than the max value of the intensity int.
 }
 
 // Input a value 0 to 255 to get a color value.
@@ -407,6 +435,7 @@ int handle_buttons(void){
   }
   return buttonsHandled;
 }
+
 
 
 
