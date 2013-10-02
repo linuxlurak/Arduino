@@ -23,7 +23,6 @@
 
   Modified 28-08-2009 for attiny84 R.Wiersma
   Modified 09-10-2009 for attiny45 A.Saporetti
-  Adding a meaningless comment to force GitHub client to behave
 */
 
 #ifndef Pins_Arduino_h
