@@ -5,9 +5,9 @@
 const int numberOfFireflies = 8;
 const int firstLED = 3;
 const int maxInterval = 60000; // Longest time between flashes of a specific led
-int ledState[firstLED + numberOfFireflies];
-unsigned long ledStartTime[firstLED + numberOfFireflies]; // start of flickering on interval
-unsigned long ledTargetDuration[firstLED + numberOfFireflies]; // duration of on+fadeout
+int ledState[numberOfFireflies];
+unsigned long ledStartTime[numberOfFireflies]; // start of flickering on interval
+unsigned long ledTargetDuration[numberOfFireflies]; // duration of on+fadeout
 
 void setup() {                
   // initialize the digital pin as an output.
