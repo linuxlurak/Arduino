@@ -2,10 +2,10 @@
   Fireflies
   Blink LEDs at random intervals and for random durationo 
 */
-const int numberOfFireflies = 8;
-const int firstLED = 3;
-const int maxInterval = 60000; // Longest time between flashes of a specific led
-const int maxDuration = 10000; // Longest time for a firefly to stay lit
+const int numberOfFireflies = 12;
+const int firstLED = 2;
+const int maxInterval = 180000; // Longest time between flashes of a specific led
+const int maxDuration = 4000; // Longest time for a firefly to stay lit
 int ledState[numberOfFireflies];
 unsigned long ledStartTime[numberOfFireflies]; // start of flickering on interval
 unsigned long ledTargetDuration[numberOfFireflies]; // duration of on+fadeout
@@ -16,27 +16,29 @@ void setup() {
     pinMode(led + firstLED, OUTPUT);
     ledState[led] = LOW;
     ledStartTime[led] = millis();
-  }    
+    digitalWrite(led, LOW);
+  }
+  delay(30000);
 }
 
 // the loop routine runs over and over again forever:
 void loop() {
   for(int led=0;led< numberOfFireflies;led++){
-    if(ledState[led] == LOW){
+    if(ledState[led] == HIGH){
       if(millis() < ledStartTime[led]){
         // Do nothing
       }
       else if(millis() - ledStartTime[led] < ledTargetDuration[led]){
-        digitalWrite(led + firstLED, HIGH);
-        ledState[led] = HIGH;
+        digitalWrite(led + firstLED, LOW);
+        ledState[led] = LOW;
       }else{
         ledStartTime[led] = millis() + random(maxInterval);
         ledTargetDuration[led] = random(250, maxDuration);
       }
     }else{
       if(millis() - ledStartTime[led] > ledTargetDuration[led]){
-        digitalWrite(led + firstLED, LOW);
-        ledState[led] = LOW;
+        digitalWrite(led + firstLED, HIGH);
+        ledState[led] = HIGH;
       }else{
         unsigned long toggleChance = random(millis() - ledStartTime[led]);
         // toggleChance is a random number between zero and maxInterval
