@@ -50,7 +50,7 @@ void loop(){
 void brightSlowFade(){
   static unsigned long lastChange = millis();
   unsigned long interval = 700;
-  if(millis() - lastChange < 0){ // millis() counter wrapped
+  if(lastChange > millis()){ // millis() counter wrapped
     lastChange = interval - (2 ^ 32 - lastChange);
   }
   if(millis() - lastChange > interval){
@@ -85,7 +85,7 @@ void brightSlowFade(){
 void dimSlowFade(){
   static unsigned long lastChange = millis();
   unsigned long interval = 2000;
-  if(millis() - lastChange < 0){ // millis() counter wrapped
+  if(lastChange > millis()){ // millis() counter wrapped
     lastChange = interval - (2 ^ 32 - lastChange);
   }
   if(millis() - lastChange > interval){
@@ -109,24 +109,24 @@ void dimSlowFade(){
 void mostlyRed(){
   static unsigned long lastChange = millis();
   unsigned long interval = 5000;
-  if(millis() - lastChange < 0){ // millis() counter wrapped
+  if(lastChange > millis()){ // millis() counter wrapped
     lastChange = interval - (2 ^ 32 - lastChange);
   }
   if(millis() - lastChange > interval){
     lastChange = millis();
-    if(r1 == r2 && g1 == g2 && b1 == b2){
+    if(r1 == r2){
       r2 = random(0,100);
     }
     r1 = converge(r1, r2);
-
-    if(g1>0){
-      g1--;
-    }else if(b1>0){
-      b1--;
-    }
     analogWrite(REDPIN, r1);
-    analogWrite(BLUEPIN, b1);
-    analogWrite(GREENPIN, g1);
+
+    if(g1>1){
+      g1--;
+      analogWrite(GREENPIN, g1);
+    }else if(b1>1){
+      b1--;
+      analogWrite(BLUEPIN, b1);
+    }
   }
 }
 
@@ -137,7 +137,7 @@ void fadeOut(){
     int intervals[] = {1400, 1400, 700, 470, 350, 280, 230, 200, 175, 155, 140, 126, 115, 107, 99, 92, 87, 82, 77, 73, 69, 66, 63, 60, 58, 56, 54, 52, 50, 48, 46, 45, 44, 42, 41, 40, 39, 38, 37, 36, 35, 35, 34, 33, 32, 31, 30, 30, 29, 29, 28, 28, 27, 27, 26, 26, 25, 25, 24, 24, 23, 23, 23, 22, 22, 22, 21, 21, 21, 20, 20, 20, 20, 19, 19, 19, 19, 18, 18, 18, 18, 18, 17, 17, 17, 17, 17, 16, 16, 16, 16, 16, 16, 15, 15, 15, 15, 15, 15, 14, 14, 14, 14, 14, 14, 14, 14, 13, 13, 13, 13, 13, 13, 13, 13, 13, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 11, 11, 11, 11, 11, 11, 11, 11, 11, 11, 11, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6};
     interval = intervals[r1] * 100;
   }
-  if(millis() - lastChange < 0){ // millis() counter wrapped
+  if(lastChange > millis()){ // millis() counter wrapped
     lastChange = interval - (2 ^ 32 - lastChange);
   }
   if(millis() - lastChange > interval){
