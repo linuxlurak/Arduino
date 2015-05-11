@@ -139,7 +139,7 @@ void mostlyRed(){
 
 void fadeOut(){
   static unsigned long lastChange = millis();
-  static unsigned long interval = 20000;
+  static unsigned long interval = 6000;
   if(mode != oldmode) { // Just entered this mode
     do{
       r1 = random(0,255);
@@ -160,14 +160,21 @@ void fadeOut(){
       r1--;
       analogWrite(REDPIN, r1);
     }
-    if(g1 > 0){
+    if(g1 >= 4){
       g1 -= 4;
-      analogWrite(GREENPIN, g1);
     }
-    if(b1 > 0){
+    else if(g1 > 0){
+      g1--;
+    }
+    analogWrite(GREENPIN, g1);
+    if(b1 >= 5){
       b1 -= 5;
-      analogWrite(BLUEPIN, b1);
     }
+    else if(b1 > 0){
+      b1--;
+    }
+    analogWrite(BLUEPIN, b1);
+
   }
 }
 
@@ -221,5 +228,7 @@ int converge(int c1, int c2){
 float magnitude(int r, int g, int b){
   return sqrt(r^2 + g^2 + b^2);
 }
+
+
 
 
