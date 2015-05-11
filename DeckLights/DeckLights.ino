@@ -19,7 +19,7 @@ void setup() {
 }
 
 void loop() {
-  if(analogRead(PHOTODIODE) > 20){
+  if(analogRead(PHOTODIODE) < 20){
     showtime();
   }
   while(analogRead(PHOTODIODE) < 50){

@@ -1,6 +1,6 @@
 #define REDPIN 10
-#define GREENPIN 9
-#define BLUEPIN 11
+#define GREENPIN 11
+#define BLUEPIN 9
 
 #define FADESPEED 100     // make this higher to slow down
 
@@ -51,14 +51,17 @@ void brightSlowFade(){
   static unsigned long lastChange = millis();
   unsigned long interval = 700;
   if(lastChange > millis()){ // millis() counter wrapped
-    lastChange = interval - (2 ^ 32 - lastChange);
+    lastChange = 0; // I'm still not sure how to handle this accurately
   }
   if(millis() - lastChange > interval){
     lastChange = millis();
     if(r1 == r2 && g1 == g2 && b1 == b2){
-      r2 = random(100,255);
-      g2 = random(100,255);
-      b2 = random(100,255);
+      do{
+        r2 = random(0,255);
+        g2 = random(0,255);
+        b2 = random(0,255);
+      }
+      while(magnitude(r2, g2, b2) < 216);
       int tweak = random(0,100);
       if(tweak > 75){
         g2 = g2 / 2;
@@ -76,7 +79,7 @@ void brightSlowFade(){
 
     g1 = converge(g1, g2);
     analogWrite(GREENPIN, g1);
-    
+
     b1 = converge(b1, b2);
     analogWrite(BLUEPIN, b1);
   }
@@ -86,21 +89,24 @@ void dimSlowFade(){
   static unsigned long lastChange = millis();
   unsigned long interval = 2000;
   if(lastChange > millis()){ // millis() counter wrapped
-    lastChange = interval - (2 ^ 32 - lastChange);
+    lastChange = 0; // I'm still not sure how to handle this accurately
   }
   if(millis() - lastChange > interval){
     lastChange = millis();
     if(r1 == r2 && g1 == g2 && b1 == b2){
-      r2 = random(0,100);
-      g2 = random(0,20);
-      b2 = random(0,20);
+      do{
+        r2 = random(0,255);
+        g2 = random(0,255);
+        b2 = random(0,255);
+      }
+      while(magnitude(r2, g2, b2) > 50);    
     }
     r1 = converge(r1, r2);
     analogWrite(REDPIN, r1);
-    
+
     g1 = converge(g1, g2);
     analogWrite(GREENPIN, g1);
-    
+
     b1 = converge(b1, b2);
     analogWrite(BLUEPIN, b1);
   }
@@ -110,7 +116,7 @@ void mostlyRed(){
   static unsigned long lastChange = millis();
   unsigned long interval = 5000;
   if(lastChange > millis()){ // millis() counter wrapped
-    lastChange = interval - (2 ^ 32 - lastChange);
+    lastChange = 0; // I'm still not sure how to handle this accurately
   }
   if(millis() - lastChange > interval){
     lastChange = millis();
@@ -123,7 +129,8 @@ void mostlyRed(){
     if(g1>1){
       g1--;
       analogWrite(GREENPIN, g1);
-    }else if(b1>1){
+    }
+    else if(b1>1){
       b1--;
       analogWrite(BLUEPIN, b1);
     }
@@ -134,11 +141,18 @@ void fadeOut(){
   static unsigned long lastChange = millis();
   static unsigned long interval = 20000;
   if(mode != oldmode) { // Just entered this mode
-    int intervals[] = {1400, 1400, 700, 470, 350, 280, 230, 200, 175, 155, 140, 126, 115, 107, 99, 92, 87, 82, 77, 73, 69, 66, 63, 60, 58, 56, 54, 52, 50, 48, 46, 45, 44, 42, 41, 40, 39, 38, 37, 36, 35, 35, 34, 33, 32, 31, 30, 30, 29, 29, 28, 28, 27, 27, 26, 26, 25, 25, 24, 24, 23, 23, 23, 22, 22, 22, 21, 21, 21, 20, 20, 20, 20, 19, 19, 19, 19, 18, 18, 18, 18, 18, 17, 17, 17, 17, 17, 16, 16, 16, 16, 16, 16, 15, 15, 15, 15, 15, 15, 14, 14, 14, 14, 14, 14, 14, 14, 13, 13, 13, 13, 13, 13, 13, 13, 13, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 11, 11, 11, 11, 11, 11, 11, 11, 11, 11, 11, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6};
-    interval = intervals[r1] * 100;
+    do{
+      r1 = random(0,255);
+      g1 = random(0,255);
+      b1 = random(0,255);
+    }
+    while(magnitude(r1, g1, b1) > 216);
+    if(r1 < 100){
+      r1 += 100;
+    }
   }
   if(lastChange > millis()){ // millis() counter wrapped
-    lastChange = interval - (2 ^ 32 - lastChange);
+    lastChange = 0; // I'm still not sure how to handle this accurately
   }
   if(millis() - lastChange > interval){
     lastChange = millis();
@@ -196,11 +210,16 @@ int converge(int c1, int c2){
   if(c1 > c2){
     c1--;
     return c1;
-  }else if(c1 < c2){
+  }
+  else if(c1 < c2){
     c1++;
     return c1;
   }
   return c1;
+}
+
+float magnitude(int r, int g, int b){
+  return sqrt(r^2 + g^2 + b^2);
 }
 
 
