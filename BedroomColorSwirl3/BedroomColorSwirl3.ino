@@ -1,3 +1,12 @@
+// Photodiode logic to be implemented
+// If photoDiode > 35, ambient = BRIGHT
+// If ambient == BRIGHT and photoDiode < 15, ambient = DIM and mode = 1
+
+// Fadeout timing to be implemented
+// fade interval = desired fade time / red level
+// decrementing red to zero at interval ms per step = desired fade time
+
+
 #define REDPIN 10
 #define GREENPIN 11
 #define BLUEPIN 9
@@ -33,23 +42,27 @@ void loop(){
   }
   switch(mode){
     case(1):
-    brightSlowFade();
+//    red();
+    quickFade();
     break;
     case(2):
-    dimSlowFade();
+//    green();
+    slowFade();
     break;
     case(3):
+//    blue();
     mostlyRed();
     break;
     case(4):
+//    redblue();
     fadeOut();
     break;
   }
 }
 
-void brightSlowFade(){
+void quickFade(){
   static unsigned long lastChange = millis();
-  unsigned long interval = 700;
+  unsigned long interval = 100;
   if(lastChange > millis()){ // millis() counter wrapped
     lastChange = 0; // I'm still not sure how to handle this accurately
   }
@@ -85,7 +98,7 @@ void brightSlowFade(){
   }
 }
 
-void dimSlowFade(){
+void slowFade(){
   static unsigned long lastChange = millis();
   unsigned long interval = 2000;
   if(lastChange > millis()){ // millis() counter wrapped
@@ -114,7 +127,7 @@ void dimSlowFade(){
 
 void mostlyRed(){
   static unsigned long lastChange = millis();
-  unsigned long interval = 5000;
+  unsigned long interval = 3000;
   if(lastChange > millis()){ // millis() counter wrapped
     lastChange = 0; // I'm still not sure how to handle this accurately
   }
@@ -133,6 +146,12 @@ void mostlyRed(){
     else if(b1>1){
       b1--;
       analogWrite(BLUEPIN, b1);
+    }
+    int blinker = random(0,100);
+    if(blinker > 95){
+      analogWrite(BLUEPIN, 0);
+    }else if(blinker > 90){
+      analogWrite(GREENPIN, 0);
     }
   }
 }
@@ -174,7 +193,6 @@ void fadeOut(){
       b1--;
     }
     analogWrite(BLUEPIN, b1);
-
   }
 }
 
@@ -229,6 +247,26 @@ float magnitude(int r, int g, int b){
   return sqrt(r^2 + g^2 + b^2);
 }
 
+void red(void){
+  analogWrite(REDPIN, 255);
+  analogWrite(GREENPIN, 0);
+  analogWrite(BLUEPIN, 0);
+}
 
+void green(void){
+  analogWrite(REDPIN, 0);
+  analogWrite(GREENPIN, 255);
+  analogWrite(BLUEPIN, 0);
+}
 
+void blue(void){
+  analogWrite(REDPIN, 0);
+  analogWrite(GREENPIN, 0);
+  analogWrite(BLUEPIN, 255);
+}
 
+void redblue(void){
+  analogWrite(REDPIN, 255);
+  analogWrite(GREENPIN, 0);
+  analogWrite(BLUEPIN, 255);
+}
