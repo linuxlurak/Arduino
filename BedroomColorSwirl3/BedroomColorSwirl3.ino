@@ -2,10 +2,6 @@
 // If photoDiode > 35, ambient = BRIGHT
 // If ambient == BRIGHT and photoDiode < 15, ambient = DIM and mode = 1
 
-// Fadeout timing to be implemented
-// fade interval = desired fade time / red level
-// decrementing red to zero at interval ms per step = desired fade time
-
 
 #define REDPIN 10
 #define GREENPIN 11
@@ -150,7 +146,8 @@ void mostlyRed(){
     int blinker = random(0,100);
     if(blinker > 95){
       analogWrite(BLUEPIN, 0);
-    }else if(blinker > 90){
+    }
+    else if(blinker > 90){
       analogWrite(GREENPIN, 0);
     }
   }
@@ -168,6 +165,13 @@ void fadeOut(){
     while(magnitude(r1, g1, b1) > 216);
     if(r1 < 100){
       r1 += 100;
+    }
+    interval = (60000 * 10) / r1; // 10 minutes divided by steps to zero
+    for(int i=0;i<10;i++){
+      analogWrite(REDPIN, 0);
+      delay(100);
+      analogWrite(REDPIN, 255);
+      delay(100);
     }
   }
   if(lastChange > millis()){ // millis() counter wrapped
@@ -270,3 +274,4 @@ void redblue(void){
   analogWrite(GREENPIN, 0);
   analogWrite(BLUEPIN, 255);
 }
+
