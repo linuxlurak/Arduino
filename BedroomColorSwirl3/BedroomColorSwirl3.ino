@@ -38,19 +38,19 @@ void loop(){
   }
   switch(mode){
     case(1):
-//    red();
+    //    red();
     quickFade();
     break;
     case(2):
-//    green();
+    //    green();
     slowFade();
     break;
     case(3):
-//    blue();
+    //    blue();
     mostlyRed();
     break;
     case(4):
-//    redblue();
+    //    redblue();
     fadeOut();
     break;
   }
@@ -62,15 +62,19 @@ void quickFade(){
   if(lastChange > millis()){ // millis() counter wrapped
     lastChange = 0; // I'm still not sure how to handle this accurately
   }
+  if(mode != oldmode) { // Just entered this mode
+    for(int i=0;i<4;i++){
+      red();
+      blue();
+    }
+  }
+
   if(millis() - lastChange > interval){
     lastChange = millis();
     if(r1 == r2 && g1 == g2 && b1 == b2){
-      do{
         r2 = random(0,255);
         g2 = random(0,255);
         b2 = random(0,255);
-      }
-      while(magnitude(r2, g2, b2) < 216);
       int tweak = random(0,100);
       if(tweak > 75){
         g2 = g2 / 2;
@@ -100,15 +104,19 @@ void slowFade(){
   if(lastChange > millis()){ // millis() counter wrapped
     lastChange = 0; // I'm still not sure how to handle this accurately
   }
+  if(mode != oldmode) { // Just entered this mode
+    for(int i=0;i<3;i++){
+      green();
+      blue();
+    }
+  }
+
   if(millis() - lastChange > interval){
     lastChange = millis();
     if(r1 == r2 && g1 == g2 && b1 == b2){
-      do{
         r2 = random(0,255);
         g2 = random(0,255);
         b2 = random(0,255);
-      }
-      while(magnitude(r2, g2, b2) > 50);    
     }
     r1 = converge(r1, r2);
     analogWrite(REDPIN, r1);
@@ -127,10 +135,19 @@ void mostlyRed(){
   if(lastChange > millis()){ // millis() counter wrapped
     lastChange = 0; // I'm still not sure how to handle this accurately
   }
+  if(mode != oldmode) { // Just entered this mode
+    for(int i=0;i<3;i++){
+      red();
+      green();
+    }
+    g1 = random(10,50);
+    b1 = random(10,50);
+  }
+
   if(millis() - lastChange > interval){
     lastChange = millis();
     if(r1 == r2){
-      r2 = random(0,100);
+      r2 = random(100,255);
     }
     r1 = converge(r1, r2);
     analogWrite(REDPIN, r1);
@@ -157,21 +174,13 @@ void fadeOut(){
   static unsigned long lastChange = millis();
   static unsigned long interval = 6000;
   if(mode != oldmode) { // Just entered this mode
-    do{
-      r1 = random(0,255);
-      g1 = random(0,255);
-      b1 = random(0,255);
-    }
-    while(magnitude(r1, g1, b1) > 216);
-    if(r1 < 100){
-      r1 += 100;
-    }
+      r1 = random(100,255);
+      g1 = random(50,200);
+      b1 = random(50,200);
     interval = (60000 * 10) / r1; // 10 minutes divided by steps to zero
-    for(int i=0;i<10;i++){
-      analogWrite(REDPIN, 0);
-      delay(100);
-      analogWrite(REDPIN, 255);
-      delay(100);
+    for(int i=0;i<3;i++){
+      off();
+      red();
     }
   }
   if(lastChange > millis()){ // millis() counter wrapped
@@ -247,31 +256,82 @@ int converge(int c1, int c2){
   return c1;
 }
 
-float magnitude(int r, int g, int b){
-  return sqrt(r^2 + g^2 + b^2);
+float magnitude2(int r, int g, int b){
+  return (r^2 + g^2 + b^2);
 }
 
 void red(void){
-  analogWrite(REDPIN, 255);
-  analogWrite(GREENPIN, 0);
-  analogWrite(BLUEPIN, 0);
+  r2 = 255;
+  g2 = 0;
+  b2 = 0;
+  for(int i = 0;i<255;i++){
+    r1 = converge(r1, r2);
+    g1 = converge(g1, g2);
+    b1 = converge(b1, b2);
+    analogWrite(REDPIN, r1);
+    analogWrite(GREENPIN, g1);
+    analogWrite(BLUEPIN, b1);
+    delay(1);
+  }
 }
 
 void green(void){
-  analogWrite(REDPIN, 0);
-  analogWrite(GREENPIN, 255);
-  analogWrite(BLUEPIN, 0);
+  r2 = 0;
+  g2 = 255;
+  b2 = 0;
+  for(int i = 0;i<255;i++){
+    r1 = converge(r1, r2);
+    g1 = converge(g1, g2);
+    b1 = converge(b1, b2);
+    analogWrite(REDPIN, r1);
+    analogWrite(GREENPIN, g1);
+    analogWrite(BLUEPIN, b1);
+    delay(1);
+  }
 }
 
 void blue(void){
-  analogWrite(REDPIN, 0);
-  analogWrite(GREENPIN, 0);
-  analogWrite(BLUEPIN, 255);
+  r2 = 0;
+  g2 = 0;
+  b2 = 255;
+  for(int i = 0;i<255;i++){
+    r1 = converge(r1, r2);
+    g1 = converge(g1, g2);
+    b1 = converge(b1, b2);
+    analogWrite(REDPIN, r1);
+    analogWrite(GREENPIN, g1);
+    analogWrite(BLUEPIN, b1);
+    delay(1);
+  }
 }
 
 void redblue(void){
-  analogWrite(REDPIN, 255);
-  analogWrite(GREENPIN, 0);
-  analogWrite(BLUEPIN, 255);
+  r2 = 255;
+  g2 = 0;
+  b2 = 255;
+  for(int i = 0;i<255;i++){
+    r1 = converge(r1, r2);
+    g1 = converge(g1, g2);
+    b1 = converge(b1, b2);
+    analogWrite(REDPIN, r1);
+    analogWrite(GREENPIN, g1);
+    analogWrite(BLUEPIN, b1);
+    delay(1);
+  }
+}
+
+void off(void){
+  r2 = 0;
+  g2 = 0;
+  b2 = 0;
+  for(int i = 0;i<255;i++){
+    r1 = converge(r1, r2);
+    g1 = converge(g1, g2);
+    b1 = converge(b1, b2);
+    analogWrite(REDPIN, r1);
+    analogWrite(GREENPIN, g1);
+    analogWrite(BLUEPIN, b1);
+    delay(1);
+  }
 }
 
